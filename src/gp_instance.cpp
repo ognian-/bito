@@ -154,8 +154,14 @@ void GPInstance::EstimateBranchLengths(double tol, size_t max_iter, bool quiet) 
   t_start = now();
   our_ostream << "Computing initial likelihood\n";
   ProcessOperations(marginal_lik_operations);
+  // Initializing per-pcsp marginal likelihood matrix
+  size_t gpcsp_count = dag_.BuildGPCSPIndexer().size();
+  EigenMatrixXd per_pcsp_marg_log_lik_(gpcsp_count, 1);
+  per_pcsp_marg_log_lik_.col(0) = GetEngine()->GetPerGPCSPLogLikelihoods();
+
   double current_marginal_log_lik = GetEngine()->GetLogMarginalLikelihood();
   std::chrono::duration<double> initial_likelihood_duration = now() - t_start;
+
   t_start = now();
 
   for (size_t i = 0; i < max_iter; i++) {
@@ -164,6 +170,8 @@ void GPInstance::EstimateBranchLengths(double tol, size_t max_iter, bool quiet) 
     // #321 Replace with a cleaned up traversal.
     ProcessOperations(populate_plv_operations);
     ProcessOperations(marginal_lik_operations);
+    //per_pcsp_marg_log_lik_.resize(gpcsp_count, i + 1);
+    //per_pcsp_marg_log_lik_.col(i + 1) = GetEngine()->GetPerGPCSPLogLikelihoods();
     double marginal_log_lik = GetEngine()->GetLogMarginalLikelihood();
     our_ostream << "Current marginal log likelihood: ";
     our_ostream << std::setprecision(9) << current_marginal_log_lik << std::endl;
@@ -272,8 +280,24 @@ StringDoubleVector GPInstance::PrettyIndexedVector(EigenConstVectorXdRef v) {
   return result;
 }
 
+std::vector<std::pair<std::string, EigenVectorXd>> GPInstance::PrettyIndexedMatrix(
+    EigenConstMatrixXdRef m) {
+  std::vector<std::pair<std::string, EigenVectorXd>> result;
+  result.reserve(m.rows());
+  const auto pretty_indexer = PrettyIndexer();
+  Assert(m.rows() <= pretty_indexer.size(), "m is too long in PrettyIndexedMatrix");
+  for (size_t i = 0; i < m.rows(); i++) {
+    result.push_back({pretty_indexer.at(i), m.row(i)});
+  }
+  return result;
+}
+
 EigenConstVectorXdRef GPInstance::GetSBNParameters() {
   return engine_->GetSBNParameters();
+}
+
+EigenConstMatrixXdRef GPInstance::GetPerGPCSPLogLikelihoodsMatrix() {
+  return per_pcsp_marg_log_lik_;
 }
 
 StringDoubleVector GPInstance::PrettyIndexedSBNParameters() {
@@ -292,6 +316,11 @@ StringDoubleVector GPInstance::PrettyIndexedPerGPCSPComponentsOfFullLogMarginal(
   return PrettyIndexedVector(GetEngine()->GetPerGPCSPComponentsOfFullLogMarginal());
 }
 
+std::vector<std::pair<std::string, EigenVectorXd>>
+GPInstance::PrettyIndexedPerGPCSPLikelihoodMatrix() {
+  return PrettyIndexedMatrix(per_pcsp_marg_log_lik_);
+}
+
 void GPInstance::SBNParametersToCSV(const std::string &file_path) {
   CSV::StringDoubleVectorToCSV(PrettyIndexedSBNParameters(), file_path);
 }
@@ -303,6 +332,10 @@ void GPInstance::SBNPriorToCSV(const std::string &file_path) {
 
 void GPInstance::BranchLengthsToCSV(const std::string &file_path) {
   CSV::StringDoubleVectorToCSV(PrettyIndexedBranchLengths(), file_path);
+}
+
+void GPInstance::PerGPCSPLogLikelihoodsToCSV(const std::string &file_path) {
+  CSV::StringDoubleVectorToCSV(PrettyIndexedPerGPCSPLogLikelihoods(), file_path);
 }
 
 RootedTreeCollection GPInstance::CurrentlyLoadedTreesWithGPBranchLengths() {

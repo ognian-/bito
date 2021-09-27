@@ -88,7 +88,7 @@ class GPInstance {
   std::unique_ptr<GPEngine> engine_;
   RootedTreeCollection tree_collection_;
   GPDAG dag_;
-  EigenMatrixXd per_pcsp_marg_log_lik_;
+  EigenMatrixXd per_pcsp_marg_lik_;
   static constexpr size_t plv_count_per_node_ = 6;
 
   void ClearTreeCollectionAssociatedState();

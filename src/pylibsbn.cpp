@@ -21,8 +21,9 @@ namespace py = pybind11;
 // Thanks to @eacousineau!
 template <typename PyClass, typename C, typename D>
 void def_read_write_mutable(PyClass &cls, const char *name, D C::*pm) {
-  cls.def_property(name, [pm](C & self) -> auto & { return self.*pm; },
-                   [pm](C &self, const D &value) { self.*pm = value; });
+  cls.def_property(
+      name, [pm](C & self) -> auto & { return self.*pm; },
+      [pm](C &self, const D &value) { self.*pm = value; });
 }
 
 // In order to make vector<double>s available to numpy, we take two steps.
@@ -404,6 +405,8 @@ PYBIND11_MODULE(libsbn, m) {
            R"raw(Write "pretty" formatted SBN parameters for the prior to a CSV.)raw")
       .def("branch_lengths_to_csv", &GPInstance::BranchLengthsToCSV,
            R"raw(Write "pretty" formatted branch lengths to a CSV.)raw")
+      .def("per_gpcsp_llhs_to_csv", &GPInstance::PerGPCSPLogLikelihoodsToCSV,
+           R"raw(Write "pretty" formatted per pcsp likelihoods to CSV.)raw")
       .def("export_trees", &GPInstance::ExportTrees,
            R"raw(Write out currently loaded trees to a Newick file
           (using current GP branch lengths).)raw",

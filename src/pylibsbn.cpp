@@ -408,9 +408,16 @@ PYBIND11_MODULE(libsbn, m) {
       .def("per_gpcsp_llhs_to_csv", &GPInstance::PerGPCSPLogLikelihoodsToCSV,
            R"raw(Write "pretty" formatted per pcsp likelihoods to CSV.)raw")
       .def(
+          "per_gpcsp_bls_from_opt_to_csv",
+          &GPInstance::PerGPCSPBranchLengthsFromOptimizationToCSV,
+          R"raw(Write "pretty" formatted per pcsp branch lengths throughout optimization to CSV.)raw")
+      .def(
           "per_gpcsp_llhs_from_opt_to_csv",
           &GPInstance::PerGPCSPLogLikelihoodsFromOptimizationToCSV,
-          R"raw(Write "pretty" formatted per pcsp likelihoods throughout optimization to CSV.)raw")
+          R"raw(Write "pretty" formatted per pcsp log likelihoods throughout optimization to CSV.)raw")
+      .def("per_gpcsp_llh_surfaces_to_csv",
+           &GPInstance::PerGPCSPLogLikelihoodSurfacesToCSV,
+           R"raw(Write "pretty" formatted per pcsp log likelihood surfaces to CSV.)raw")
       .def("export_trees", &GPInstance::ExportTrees,
            R"raw(Write out currently loaded trees to a Newick file
           (using current GP branch lengths).)raw",
@@ -439,7 +446,9 @@ PYBIND11_MODULE(libsbn, m) {
            "Estimate the SBN parameters based on current branch lengths.")
       .def("estimate_branch_lengths", &GPInstance::EstimateBranchLengths,
            "Estimate branch lengths for the GPInstance.", py::arg("tol"),
-           py::arg("max_iter"), py::arg("quiet") = false);
+           py::arg("max_iter"), py::arg("quiet") = false)
+      .def("scan_pcsp_likelihoods", &GPInstance::GetPerGPCSPLogLikelihoodSurfaces,
+           "Obtain per pcsp log likelihood surfaces", py::arg("steps"));
 
   // If you want to be sure to get all of the stdout and cerr messages, put your
   // Python code in a context like so:

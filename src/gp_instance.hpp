@@ -9,6 +9,9 @@
 #include "rooted_tree_collection.hpp"
 #include "site_pattern.hpp"
 
+// New typedef
+using StringEigenVectorXdVector = std::vector<std::pair<std::string, EigenVectorXd>>;
+
 class GPInstance {
  public:
   explicit GPInstance(const std::string &mmap_file_path)
@@ -39,24 +42,28 @@ class GPInstance {
   void ComputeLikelihoods();
   void ComputeMarginalLikelihood();
   void CalculateHybridMarginals();
+  void GetPerGPCSPLogLikelihoodSurfaces(int steps);
   RootedTreeCollection GenerateCompleteRootedTreeCollection();
 
   // #348: A lot of code duplication here with things in SBNInstance.
   StringVector PrettyIndexer() const;
   EigenConstVectorXdRef GetSBNParameters();
-  EigenMatrixXd GetPerGPCSPLogLikelihoodsFromOptimization();
   StringDoubleVector PrettyIndexedSBNParameters();
   StringDoubleVector PrettyIndexedBranchLengths();
   StringDoubleVector PrettyIndexedPerGPCSPLogLikelihoods();
   StringDoubleVector PrettyIndexedPerGPCSPComponentsOfFullLogMarginal();
-  std::vector<std::pair<std::string, EigenVectorXd>>
-  PrettyIndexedPerGPCSPLogLikelihoodsFromOptimization();
+
+  StringEigenVectorXdVector PrettyIndexedPerGPCSPBranchLengthsFromOptimization();
+  StringEigenVectorXdVector PrettyIndexedPerGPCSPLogLikelihoodsFromOptimization();
+  StringEigenVectorXdVector PrettyIndexedPerGPCSPLogLikelihoodSurfaces();
 
   void SBNParametersToCSV(const std::string &file_path);
   void SBNPriorToCSV(const std::string &file_path);
   void BranchLengthsToCSV(const std::string &file_path);
   void PerGPCSPLogLikelihoodsToCSV(const std::string &file_path);
+  void PerGPCSPBranchLengthsFromOptimizationToCSV(const std::string &file_path);
   void PerGPCSPLogLikelihoodsFromOptimizationToCSV(const std::string &file_path);
+  void PerGPCSPLogLikelihoodSurfacesToCSV(const std::string &file_path);
 
   // Generate a version of the topologies in the current tree collection that use
   // the current GP branch lengths.
@@ -89,7 +96,9 @@ class GPInstance {
   std::unique_ptr<GPEngine> engine_;
   RootedTreeCollection tree_collection_;
   GPDAG dag_;
+  EigenMatrixXd per_pcsp_branch_lengths_;
   EigenMatrixXd per_pcsp_marg_lik_;
+  EigenMatrixXd per_pcsp_lik_surfaces_;
   static constexpr size_t plv_count_per_node_ = 6;
 
   void ClearTreeCollectionAssociatedState();
@@ -99,9 +108,11 @@ class GPInstance {
                                   const Node *leaf_node) const;
   RootedTreeCollection TreesWithGPBranchLengthsOfTopologies(
       Node::NodePtrVec &&topologies) const;
+
+  void PerPCSPIndexedMatrixToCSV(StringEigenVectorXdVector per_pcsp_indexed_matrix,
+                                 const std::string &file_path);
   StringDoubleVector PrettyIndexedVector(EigenConstVectorXdRef v);
-  std::vector<std::pair<std::string, EigenVectorXd>> PrettyIndexedMatrix(
-      EigenConstMatrixXdRef m);
+  StringEigenVectorXdVector PrettyIndexedMatrix(EigenConstMatrixXdRef m);
 };
 
 #endif  // SRC_GP_INSTANCE_HPP_

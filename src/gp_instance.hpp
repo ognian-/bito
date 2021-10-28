@@ -56,6 +56,7 @@ class GPInstance {
   StringEigenVectorXdVector PrettyIndexedPerGPCSPBranchLengthsFromOptimization();
   StringEigenVectorXdVector PrettyIndexedPerGPCSPLogLikelihoodsFromOptimization();
   StringEigenVectorXdVector PrettyIndexedPerGPCSPLogLikelihoodSurfaces();
+  StringEigenVectorXdVector TrackValuesFromOptimization();
 
   void SBNParametersToCSV(const std::string &file_path);
   void SBNPriorToCSV(const std::string &file_path);
@@ -64,6 +65,7 @@ class GPInstance {
   void PerGPCSPBranchLengthsFromOptimizationToCSV(const std::string &file_path);
   void PerGPCSPLogLikelihoodsFromOptimizationToCSV(const std::string &file_path);
   void PerGPCSPLogLikelihoodSurfacesToCSV(const std::string &file_path);
+  void TrackValuesFromOptimizationToCSV(const std::string &file_path);
 
   // Generate a version of the topologies in the current tree collection that use
   // the current GP branch lengths.

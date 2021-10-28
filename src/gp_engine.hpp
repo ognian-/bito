@@ -19,10 +19,21 @@
 
 class GPEngine {
  public:
+  // Options for optimization method.
+  enum class OptimizationMethod {
+    DefaultGradientOptimization,
+    DefaultNongradientOptimization,
+    BrentOptimization,
+    GradientAscentOptimization,
+    LogSpaceGradientAscentOptimization,
+    TOMS748Optimization,
+    NewtonOptimization
+  };
+
   GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
            const std::string& mmap_file_path, double rescaling_threshold,
            EigenVectorXd sbn_prior, EigenVectorXd unconditional_node_probabilities,
-           EigenVectorXd inverted_sbn_prior);
+           EigenVectorXd inverted_sbn_prior, bool use_gradients);
 
   // These operators mean that we can invoke this class on each of the operations.
   void operator()(const GPOperations::ZeroPLV& op);
@@ -33,11 +44,14 @@ class GPEngine {
   void operator()(const GPOperations::Multiply& op);
   void operator()(const GPOperations::Likelihood& op);
   void operator()(const GPOperations::OptimizeBranchLength& op);
+  void operator()(const GPOperations::OptimizeBranchLength& op,
+                  const GPEngine::OptimizationMethod method);
   void operator()(const GPOperations::UpdateSBNProbabilities& op);
   void operator()(const GPOperations::PrepForMarginalization& op);
 
   void ProcessOperations(GPOperationVector operations);
 
+  void SetOptimizationMethod(const OptimizationMethod method);
   void SetTransitionMatrixToHaveBranchLength(double branch_length);
   void SetTransitionAndDerivativeMatricesToHaveBranchLength(double branch_length);
   void SetTransitionMatrixToHaveBranchLengthAndTranspose(double branch_length);
@@ -81,7 +95,10 @@ class GPEngine {
   void HotStartBranchLengths(const RootedTreeCollection& tree_collection,
                              const BitsetSizeMap& indexer);
 
+  // Log llh and derivative functions
   DoublePair LogLikelihoodAndDerivative(const GPOperations::OptimizeBranchLength& op);
+  std::tuple<double, double, double> LogLikelihoodAndFirstTwoDerivatives(
+      const GPOperations::OptimizeBranchLength& op);
 
   static constexpr double default_rescaling_threshold_ = 1e-40;
   static constexpr double default_branch_length_ = 0.1;
@@ -90,11 +107,14 @@ class GPEngine {
 
  private:
   static constexpr double min_log_branch_length_ = -13.9;
-  static constexpr double max_log_branch_length_ = 1.1;
+  static constexpr double max_log_branch_length_ =
+      1 + std::numeric_limits<double>::min();
 
   int significant_digits_for_optimization_ = 6;
-  double relative_tolerance_for_optimization_ = 1e-2;
+  double relative_tolerance_for_optimization_ = 1e-6;
+  double denominator_tolerance_for_newton_ = 1e-5;
   double step_size_for_optimization_ = 5e-4;
+  double step_size_for_log_space_optimization_ = 1.0003;
   size_t max_iter_for_optimization_ = 1000;
 
   // The length of this vector is equal to the number of site patterns.
@@ -126,6 +146,7 @@ class GPEngine {
   EigenVectorXd q_;
   EigenVectorXd unconditional_node_probabilities_;
   EigenVectorXd inverted_sbn_prior_;
+  bool use_gradients_;
 
   // The number of rows is equal to the number of GPCSPs.
   // The number of columns is equal to the number of site patterns.
@@ -139,6 +160,8 @@ class GPEngine {
   EigenVectorXd per_pattern_likelihoods_;
   EigenVectorXd per_pattern_likelihood_derivatives_;
   EigenVectorXd per_pattern_likelihood_derivative_ratios_;
+  EigenVectorXd per_pattern_likelihood_second_derivatives_;
+  EigenVectorXd per_pattern_likelihood_second_derivative_ratios_;
 
   // When we change from JC69Model, check that we are actually doing transpose in
   // leafward calculations.
@@ -151,6 +174,7 @@ class GPEngine {
   Eigen::DiagonalMatrix<double, 4> diagonal_matrix_;
   Eigen::Matrix4d transition_matrix_;
   Eigen::Matrix4d derivative_matrix_;
+  Eigen::Matrix4d hessian_matrix_;
   Eigen::Vector4d stationary_distribution_ = substitution_model_.GetFrequencies();
   EigenVectorXd site_pattern_weights_;
 
@@ -174,9 +198,25 @@ class GPEngine {
   void RescalePLVIfNeeded(size_t plv_idx);
   double LogRescalingFor(size_t plv_idx);
 
+  std::optional<OptimizationMethod> optimization_method_ = std::nullopt;
+  void Optimization(const GPOperations::OptimizeBranchLength& op);
+  void Optimization(const GPOperations::OptimizeBranchLength& op,
+                    std::optional<OptimizationMethod> os);
   void BrentOptimization(const GPOperations::OptimizeBranchLength& op);
   void GradientAscentOptimization(const GPOperations::OptimizeBranchLength& op);
+  void LogSpaceGradientAscentOptimization(const GPOperations::OptimizeBranchLength& op);
+  void TOMS748Optimization(const GPOperations::OptimizeBranchLength& op);
+  void NewtonOptimization(const GPOperations::OptimizeBranchLength& op);
+  // TODO: REMOVE THIS
+  void Optimize_RUNALL(const GPOperations::OptimizeBranchLength& op);
 
+  inline void PrepareUnrescaledPerPatternLikelihoodSecondDerivatives(size_t src1_idx,
+                                                                     size_t src2_idx) {
+    per_pattern_likelihood_second_derivatives_ =
+        (plvs_.at(src1_idx).transpose() * hessian_matrix_ * plvs_.at(src2_idx))
+            .diagonal()
+            .array();
+  }
   inline void PrepareUnrescaledPerPatternLikelihoodDerivatives(size_t src1_idx,
                                                                size_t src2_idx) {
     per_pattern_likelihood_derivatives_ =
@@ -213,7 +253,7 @@ TEST_CASE("GPEngine") {
   SitePattern hello_site_pattern = SitePattern::HelloSitePattern();
   GPEngine engine(hello_site_pattern, 6 * 5, 5, "_ignore/mmapped_plv.data",
                   GPEngine::default_rescaling_threshold_, empty_vector, empty_vector,
-                  empty_vector);
+                  empty_vector, false);
   engine.SetTransitionMatrixToHaveBranchLength(0.75);
   // Computed directly:
   // https://en.wikipedia.org/wiki/Models_of_DNA_evolution#JC69_model_%28Jukes_and_Cantor_1969%29

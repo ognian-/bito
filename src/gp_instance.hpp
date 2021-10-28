@@ -28,6 +28,7 @@ class GPInstance {
   void ReadNexusFile(const std::string &fname);
   void ReadNexusFileGZ(const std::string &fname);
 
+  void UseGradientOptimization(bool use_gradients = false);
   void MakeEngine(double rescaling_threshold = GPEngine::default_rescaling_threshold_);
   GPEngine *GetEngine() const;
   bool HasEngine() const;
@@ -102,6 +103,8 @@ class GPInstance {
   EigenMatrixXd per_pcsp_marg_lik_;
   EigenMatrixXd per_pcsp_lik_surfaces_;
   static constexpr size_t plv_count_per_node_ = 6;
+  bool use_gradients_;
+  GPEngine::OptimizationMethod optimization_method_;
 
   void ClearTreeCollectionAssociatedState();
   void CheckSequencesAndTreesLoaded() const;

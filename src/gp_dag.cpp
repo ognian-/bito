@@ -2,6 +2,7 @@
 // libsbn is free software under the GPLv3; see LICENSE file for details.
 
 #include "gp_dag.hpp"
+
 #include "numerical_utils.hpp"
 
 using namespace GPOperations;  // NOLINT

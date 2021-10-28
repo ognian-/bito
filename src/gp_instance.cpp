@@ -77,6 +77,13 @@ void GPInstance::CheckSequencesAndTreesLoaded() const {
   }
 }
 
+void GPInstance::UseGradientOptimization(bool use_gradients) {
+  use_gradients_ = use_gradients;
+  optimization_method_ =
+      (use_gradients ? GPEngine::OptimizationMethod::DefaultGradientOptimization
+                     : GPEngine::OptimizationMethod::DefaultNongradientOptimization);
+};
+
 void GPInstance::MakeEngine(double rescaling_threshold) {
   CheckSequencesAndTreesLoaded();
   SitePattern site_pattern(alignment_, tree_collection_.TagTaxonMap());
@@ -91,7 +98,7 @@ void GPInstance::MakeEngine(double rescaling_threshold) {
       std::move(site_pattern), plv_count_per_node_ * (dag_.NodeCountWithoutDAGRoot()),
       dag_.GPCSPCountWithFakeSubsplits(), mmap_file_path_, rescaling_threshold,
       std::move(sbn_prior), std::move(unconditional_node_probabilities),
-      std::move(inverted_sbn_prior));
+      std::move(inverted_sbn_prior), use_gradients_);
 }
 
 GPEngine *GPInstance::GetEngine() const {

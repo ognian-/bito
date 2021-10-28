@@ -267,13 +267,12 @@ TEST_CASE("GPInstance: hotstart branch lengths") {
   // We are going to verify correct assignment of the PCSP with sister z2, z3 and
   // children z0, z1, which only appears in the tree (outgroup,((z0,z1),(z2,z3))).
   // Vector of taxon names: [outgroup, z2, z3, z1, z0]
-  // So, this below is the desired GPCSP (in full subsplit notation), which corresponds
-  // to sister indices 1, 2, and children 4, 3:
-  // 0110000011|0001000001, 2
+  // So, this below is the desired GPCSP (in full subsplit notation), which
+  // corresponds to sister indices 1, 2, and children 4, 3: 0110000011|0001000001, 2
   // Thus we are interested in the branch length index 2.
 
-  // These branch lengths are obtained by excluding (outgroup,(((z0,z1),z2),z3)) (which
-  // doesn't have this PCSP) and grabbing the rest of the branch lengths.
+  // These branch lengths are obtained by excluding (outgroup,(((z0,z1),z2),z3))
+  // (which doesn't have this PCSP) and grabbing the rest of the branch lengths.
   EigenVectorXd hotstart_expected_branch_lengths(33);
   hotstart_expected_branch_lengths << 0.1175370000, 0.1175750000, 0.1195780000,
       0.0918962000, 0.0918931000, 0.1192590000, 0.0906988000, 0.0906972000,
@@ -284,6 +283,10 @@ TEST_CASE("GPInstance: hotstart branch lengths") {
       0.1892030000, 0.1894900000, 0.1895430000, 0.1896900000, 0.1905710000;
   double true_mean = hotstart_expected_branch_lengths.array().mean();
   inst.HotStartBranchLengths();
+  // TODO: The correct index on mac is 1, not 2. Need to make this test more general
+  // to pass on all systems.
+  std::cout << "The hotstart branch lengths are: "
+            << inst.GetEngine()->GetBranchLengths();
   CHECK_EQ(true_mean, inst.GetEngine()->GetBranchLengths()(2));
 }
 
@@ -327,8 +330,8 @@ TEST_CASE("GPInstance: SBN root split probabilities on five taxa") {
   // To test this, we are going to compute P(y_k | \tau) for {\tau : s \in \tau} and
   // multiply this by q(\tau) = 1/4 since we are assuming a uniform prior.
 
-  // The collection of trees that we are looking at has 3 rootplits where one root split
-  // generates two trees and the other 2 root splits generating one tree each
+  // The collection of trees that we are looking at has 3 rootplits where one root
+  // split generates two trees and the other 2 root splits generating one tree each
   // for the total of 4 trees.
 
   // We will compare the values against the 3 rootsplits, since we cannot assume
@@ -352,10 +355,10 @@ TEST_CASE("GPInstance: SBN root split probabilities on five taxa") {
 
   inst.EstimateSBNParameters();
   EigenVectorXd realized_q = inst.GetEngine()->GetSBNParameters().segment(0, 3);
-  // The expected values for the SBN parameters: q[s] \propto log_lik[s] + log_prior[s].
-  // The SBN params are initialized so that we get a uniform distribution over the
-  // trees. For the rootsplits, the values are (1/4, 1/4, 2/4) corresponding to the
-  // entries in expected_log_lik_vector_at_rootsplits.
+  // The expected values for the SBN parameters: q[s] \propto log_lik[s] +
+  // log_prior[s]. The SBN params are initialized so that we get a uniform
+  // distribution over the trees. For the rootsplits, the values are (1/4, 1/4, 2/4)
+  // corresponding to the entries in expected_log_lik_vector_at_rootsplits.
   EigenVectorXd log_prior(3);
   log_prior << log(1. / 4), log(1. / 4), log(2. / 4);
   EigenVectorXd expected_q = expected_log_lik_vector_at_rootsplits + log_prior;
@@ -518,8 +521,8 @@ EigenVectorXd ClassicalLikelihoodOf(const std::string& tree_path,
 
 // This is the simplest hybrid marginal that has tree uncertainty above and below the
 // focal PCSP. Note that this test and the next one are set up so that the quartets
-// reach far enough out that there is no uncertainty in the part of the tree outside of
-// the quartet. In this case the hybrid marginal will be the same as the sum of
+// reach far enough out that there is no uncertainty in the part of the tree outside
+// of the quartet. In this case the hybrid marginal will be the same as the sum of
 // classical likelihoods.
 TEST_CASE("GPInstance: simplest hybrid marginal") {
   const std::string fasta_path = "data/7-taxon-slice-of-ds1.fasta";
@@ -581,8 +584,9 @@ TEST_CASE("GPInstance: second simplest hybrid marginal") {
       inst.GetEngine()->CalculateQuartetHybridLikelihoods(request);
 
   inst.LoadAllGeneratedTrees();
-  // We restrict to only the trees that contain the DAG edge 6 (which goes between node
-  // 12 and node 11). We get the bitset representation using inst.PrintGPCSPIndexer();
+  // We restrict to only the trees that contain the DAG edge 6 (which goes between
+  // node 12 and node 11). We get the bitset representation using
+  // inst.PrintGPCSPIndexer();
   inst.ExportTreesWithAPCSP("000000100111100001110", tree_path);
   EigenVectorXd manual_log_likelihoods = ClassicalLikelihoodOf(tree_path, fasta_path);
   CheckVectorXdEquality(quartet_log_likelihoods, manual_log_likelihoods, 1e-12);

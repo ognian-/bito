@@ -9,6 +9,7 @@
 
 #include "combinatorics.hpp"
 #include "gp_instance.hpp"
+#include "nni_evaluation_engine.hpp"
 #include "phylo_model.hpp"
 #include "reindexer.hpp"
 #include "rooted_sbn_instance.hpp"
@@ -790,8 +791,11 @@ TEST_CASE("GPInstance: SubsplitDAG NNI (Nearest Neighbor Interchange)") {
   auto set_of_nnis_2 = SetOfNNIs();
   auto correct_set_of_nnis = SetOfNNIs();
 
+  auto nni_engine = NNIEvaluationEngine(dag, set_of_nnis);
+  auto nni_engine_2 = NNIEvaluationEngine(dag, set_of_nnis_2);
+
   // Build NNI Set from current DAG state.
-  SyncSetOfNNIsWithDAG(set_of_nnis, dag);
+  nni_engine.SyncSetOfNNIsWithDAG(set_of_nnis, dag);
 
   // Functions for quick manual insertion/removal for Correct NNI Set.
   auto InsertNNI = [&correct_set_of_nnis](Bitset parent, Bitset child) {
@@ -845,8 +849,8 @@ TEST_CASE("GPInstance: SubsplitDAG NNI (Nearest Neighbor Interchange)") {
   dag.AddNodePair(nni_to_add.first, nni_to_add.second);
 
   // Update NNI.
-  UpdateSetOfNNIsAfterDAGAddNodePair(set_of_nnis, dag, nni_to_add.first,
-                                     nni_to_add.second);
+  nni_engine.UpdateSetOfNNIsAfterDAGAddNodePair(set_of_nnis, dag, nni_to_add.first,
+                                                nni_to_add.second);
   // Add parents of parent (edge 8) to NNI Set.
   InsertNNI(Bitset::Subsplit("001001", "110110"),
             Bitset::Subsplit("110000", "000110"));  // (25|0134)-(01|34)
@@ -866,6 +870,6 @@ TEST_CASE("GPInstance: SubsplitDAG NNI (Nearest Neighbor Interchange)") {
   CHECK_EQ(set_of_nnis, correct_set_of_nnis);
 
   // Build NNI Set from current DAG state from scratch.
-  SyncSetOfNNIsWithDAG(set_of_nnis_2, dag);
+  nni_engine_2.SyncSetOfNNIsWithDAG(set_of_nnis_2, dag);
   CHECK_EQ(set_of_nnis_2, correct_set_of_nnis);
 }

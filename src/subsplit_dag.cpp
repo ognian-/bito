@@ -774,8 +774,9 @@ SubsplitDAG::NodeAdditionResult SubsplitDAG::AddNodePair(const Bitset &parent_su
   SizeVector new_node_ids, new_edge_idxs, node_reindexer, edge_reindexer;
   const bool parent_is_new = !ContainsNode(parent_subsplit);
   const bool child_is_new = !ContainsNode(child_subsplit);
+  // Soft assert: allows for parent-child pair to exist in the DAG, but no work is done.
   // If both the parent and child exists, return new_node_ids and  new_edge_idxs as
-  // empty, and node_reindexer and edge_reindexer as default reindexers.
+  // empty, and node_reindexer and edge_reindexer as identity reindexers.
   if (!parent_is_new && !child_is_new) {
     // Return default reindexers if both nodes already exist.
     node_reindexer = Reindexer::IdentityReindexer(NodeCount());

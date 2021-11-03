@@ -1,5 +1,6 @@
 // Copyright 2019-2021 bito project contributors.
 // bito is free software under the GPLv3; see LICENSE file for details.
+//
 
 #ifndef SRC_GP_INSTANCE_HPP_
 #define SRC_GP_INSTANCE_HPP_
@@ -77,6 +78,9 @@ class GPInstance {
 
   // Export the subsplit DAG as a DOT file.
   void SubsplitDAGToDot(const std::string &out_path, bool show_index_labels = true);
+
+  // Add parent-child node pair to dag and reorganize underlying data.
+  void AddNodePair(const Bitset& parent_bitset, const Bitset& child_bitset);
 
  private:
   std::string mmap_file_path_;

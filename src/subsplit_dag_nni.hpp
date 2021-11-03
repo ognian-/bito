@@ -20,6 +20,7 @@
 #ifndef SRC_SUBSPLIT_DAG_NNI_HPP_
 #define SRC_SUBSPLIT_DAG_NNI_HPP_
 
+#include <numeric>
 #include "bitset.hpp"
 #include "sugar.hpp"
 
@@ -56,26 +57,66 @@ class NNIOperation {
   Bitset child_;
 };
 
-// SetOfNNIs contain all NNI output parent/child pairs which are "adjacent" to the
+// SetOfNNIs: 
+// Contain all NNI output parent/child pairs which are "adjacent" to the
 // current SubsplitDAG. That is, pairs which are the result of an NNI on an input bitset
 // pair that are currently present in the SubsplitDAG.
-class SetOfNNIs {
+class SetOfNNIs : protected std::set<NNIOperation> {
  public:
-  SetOfNNIs() : set_(){};
-
   friend bool operator==(const SetOfNNIs &lhs, const SetOfNNIs &rhs);
   friend bool operator!=(const SetOfNNIs &lhs, const SetOfNNIs &rhs);
 
-  void Insert(NNIOperation nni_op);
-  void Insert(Bitset parent, Bitset child);
-  void Erase(NNIOperation nni_op);
-  void Erase(Bitset parent, Bitset child);
-  void Clear();
-  size_t GetSize() const;
+  void Insert(NNIOperation nni_op) { insert(nni_op); };
+  void Insert(Bitset parent, Bitset child) { Insert(NNIOperation(parent, child)); };
+  void Erase(NNIOperation nni_op) { erase(nni_op); };
+  void Erase(Bitset parent, Bitset child) { Erase(NNIOperation(parent, child)); };
 
- private:
-  std::set<NNIOperation> set_;
+  void Clear() { return clear(); };
+  size_t GetSize() const { return size(); };
+
+  std::set<NNIOperation>::iterator Begin() const { return begin(); };
+  std::set<NNIOperation>::iterator End() const { return end(); };
 };
+
+// RankedSetOfNNIs: 
+// Bi-directional Map between an NNI and a associated score for ranking the quality of NNI.
+class RankedSetOfNNIs {
+ public:
+  void Insert(double, NNIOperation);
+  void Insert(std::pair<double, NNIOperation>);
+  void Remove(double, NNIOperation);
+  void Remove(std::pair<double, NNIOperation>);
+  bool Empty() const { return score_to_nni_.empty(); };
+
+  double GetMaxScore() const { return score_to_nni_.rbegin()->first; };
+  NNIOperation GetMaxNNI() const { return score_to_nni_.rbegin()->second; };
+
+  std::set<std::pair<double, NNIOperation>> score_to_nni_;
+  std::set<std::pair<double, NNIOperation>> nni_to_score_;
+};
+
+// Sorts a positional index array [0,1,2,3,...] with respect to input data array.
+template<typename T>
+std::vector<size_t> ArgSort(const std::vector<T> &data) {
+  std::vector<size_t> sorted_index(data.size());
+  std::iota(data.begin(), data.end(), 0);
+  std::sort(data.begin(), data.end(),
+    // Sort indices of sorted_index according to their index in input_array.
+    [&sorted_index, &data](int left, int right) {
+      return data[left] < data[right];
+  });
+  return sorted_index;
+};
+
+// // Maintains an sorted index vector with respect to a reference data array.
+// template<typename T, std::function<int(T,T)>
+// class ArgsortVector {
+//  public:
+
+//  private:
+//   std::vector<size_t> argsort_;
+//   std::vector<T> *data_;
+// };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 
@@ -112,7 +153,7 @@ TEST_CASE("NNIOperation") {
   CHECK_EQ(correct_nni_xy, nni_xy_2);
   CHECK_THROWS(
       NNIOperation::NNIOperationFromNeighboringSubsplits(parent_in, child_in, 0, 0));
-}
+};
 
 #endif  // DOCTEST_LIBRARY_INCLUDED
 

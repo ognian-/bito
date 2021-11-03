@@ -37,7 +37,8 @@ inline bool IsValidReindexer(const SizeVector &reindexer) {
   return true;
 }
 
-// Reindexes the given vector according to the reindexer.
+// Reindexes the given vector, according to the reindexer.
+// NOTE: Is it worth having the option to perform in-place?
 template <typename VectorType>
 inline VectorType Reindex(VectorType &old_vector, const SizeVector &reindexer) {
   Assert(IsValidReindexer(reindexer), "Reindexer must be valid in Reindexer::Reindex.");
@@ -49,6 +50,7 @@ inline VectorType Reindex(VectorType &old_vector, const SizeVector &reindexer) {
   }
   return new_vector;
 }
+
 
 // Reindexes the given vector concatenated with some additional values.
 template <typename VectorType>

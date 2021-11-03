@@ -11,6 +11,12 @@ GPDAG::PLVType RPLVType(bool rotated) {
   return rotated ? GPDAG::PLVType::R_TILDE : GPDAG::PLVType::R;
 }
 
+GPDAG::NodeAdditionResult GPDAG::AddNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit) {
+  auto node_additional_result = SubsplitDAG::AddNodePair(parent_subsplit, child_subsplit);
+
+  return node_additional_result;
+}
+
 // The PLVTypes are documented where the enum is defined in the header file.
 size_t GPDAG::GetPLVIndexStatic(PLVType plv_type, size_t node_count, size_t src_idx) {
   switch (plv_type) {

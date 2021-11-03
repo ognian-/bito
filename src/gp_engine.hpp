@@ -16,6 +16,7 @@
 #include "sbn_maps.hpp"
 #include "site_pattern.hpp"
 #include "substitution_model.hpp"
+#include "reindexer.hpp"
 
 class GPEngine {
  public:
@@ -35,6 +36,9 @@ class GPEngine {
   void operator()(const GPOperations::OptimizeBranchLength& op);
   void operator()(const GPOperations::UpdateSBNProbabilities& op);
   void operator()(const GPOperations::PrepForMarginalization& op);
+
+  // Reindex GPEngine data for after a node pair has been added to the DAG.
+  void ReindexAfterAddNodePair(const SizeVector& node_reindexer, const SizeVector& edge_reindexer);
 
   void ProcessOperations(GPOperationVector operations);
 

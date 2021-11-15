@@ -61,12 +61,13 @@ NNIOperation NNIOperation::NNIOperationFromNeighboringSubsplits(
 // ** SetOfNNIs Methods
 
 bool operator==(const SetOfNNIs &lhs, const SetOfNNIs &rhs) {
-  return static_cast<std::set<NNIOperation>>(lhs) == static_cast<std::set<NNIOperation>>(rhs);
+  return static_cast<std::set<NNIOperation>>(lhs) ==
+         static_cast<std::set<NNIOperation>>(rhs);
 }
 
 bool operator!=(const SetOfNNIs &lhs, const SetOfNNIs &rhs) {
-  return static_cast<std::set<NNIOperation>>(lhs) != static_cast<std::set<NNIOperation>>(rhs);
+  return static_cast<std::set<NNIOperation>>(lhs) !=
+         static_cast<std::set<NNIOperation>>(rhs);
 }
 
 // ** RankedSetOfNNIs Methods
-

@@ -362,11 +362,12 @@ void GPInstance::SubsplitDAGToDot(const std::string &out_path, bool show_index_l
   out_stream.close();
 }
 
-void GPInstance::AddNodePair(const Bitset& parent_bitset, const Bitset& child_bitset) {
+void GPInstance::AddNodePair(const Bitset &parent_bitset, const Bitset &child_bitset) {
+  // Add node pair to SubsplitDAG.
   auto node_addition_result = dag_.AddNodePair(parent_bitset, child_bitset);
-
+  // Fetch the reorganized locations of nodes and edges (relative to before AddNodePair)
   auto node_reindexer = node_addition_result.node_reindexer;
   auto edge_reindexer = node_addition_result.edge_reindexer;
-
-  Reindexer::Reindex(, node_reindexer);
+  // Reindex data
+  // Reindexer::Reindex(, node_reindexer);
 }

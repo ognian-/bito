@@ -308,10 +308,10 @@ SizeVector RootedSBNMaps::IndexerRepresentationOf(const BitsetSizeMap& indexer,
                                                   const size_t default_index) {
   const auto leaf_count = topology->LeafCount();
   SizeVector result;
-  // First, add the rootsplit PCSPs.
+  // First, add the rootsplit PCSP Idxs.
   const Bitset rootsplit_pcsp = Bitset::PCSPOfRootsplit(Rootsplit(topology.get()));
   result.push_back(AtWithDefault(indexer, rootsplit_pcsp, default_index));
-  // Now add the PCSPs.
+  // Now add the PCSP Idxs in topological preorder.
   topology->RootedPCSPPreorder([&leaf_count, &indexer, &default_index, &result](
                                    const Node* sister_node, const Node* focal_node,
                                    const Node* child0_node, const Node* child1_node) {

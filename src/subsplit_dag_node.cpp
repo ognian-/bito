@@ -11,6 +11,32 @@ std::string GetNeighborString(SizeVector neighbors) {
   return str;
 }
 
+// A node
+bool SubsplitDAGNode::IsValid() const {
+  // If node is a leaf, then a valid node should have no parents.
+  if (IsLeaf()) {
+    return (GetLeafwardSorted().size() + GetLeafwardRotated().size() == 0);
+  }
+  // If node is a root, then a valid node should have no children.
+  else if (IsDAGRootNode()) {
+    return (GetRootwardSorted().size() + GetRootwardRotated().size() == 0);
+  }
+  // If neither, then node should either have:
+  // (1) Zero parents and zero children.
+  // (2) 1+ parents, 1+ sorted children, and 1+ rotated children.
+  size_t parent_node_count = GetRootwardSorted().size() + GetRootwardRotated().size();
+  if (parent_node_count > 0) {
+    if (GetLeafwardSorted().size() == 0 || GetLeafwardSorted().size() == 0) {
+      return false;
+    }
+  } else {
+    if (GetLeafwardSorted().size() > 0 || GetLeafwardSorted().size() > 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 std::string SubsplitDAGNode::ToString() const {
   std::string str = std::to_string(id_) + ": " + GetBitset().SubsplitToString() + "\n";
   str += "Rootward Sorted: " + GetNeighborString(rootward_sorted_) + "\n";

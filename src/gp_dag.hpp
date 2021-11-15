@@ -54,9 +54,11 @@ class GPDAG : public TidySubsplitDAG {
   [[nodiscard]] GPOperationVector SetRhatToStationary() const;
   // Set p-PLVs to zero.
   [[nodiscard]] GPOperationVector SetRootwardZero() const;
-  
+
   QuartetHybridRequest QuartetHybridRequestOf(size_t parent_id, bool rotated,
                                               size_t child_id) const;
+
+  // ModificationResult AddNodePair(Bitset parent_bitset, Bitset child_bitset);
 
  private:
   [[nodiscard]] GPOperationVector LeafwardPass(const SizeVector &visit_order) const;

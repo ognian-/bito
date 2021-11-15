@@ -21,6 +21,7 @@
 #define SRC_SUBSPLIT_DAG_NNI_HPP_
 
 #include <numeric>
+
 #include "bitset.hpp"
 #include "sugar.hpp"
 
@@ -57,7 +58,7 @@ class NNIOperation {
   Bitset child_;
 };
 
-// SetOfNNIs: 
+// SetOfNNIs:
 // Contain all NNI output parent/child pairs which are "adjacent" to the
 // current SubsplitDAG. That is, pairs which are the result of an NNI on an input bitset
 // pair that are currently present in the SubsplitDAG.
@@ -78,8 +79,8 @@ class SetOfNNIs : protected std::set<NNIOperation> {
   std::set<NNIOperation>::iterator End() const { return end(); };
 };
 
-// RankedSetOfNNIs: 
-// Bi-directional Map between an NNI and a associated score for ranking the quality of NNI.
+// RankedSetOfNNIs: // Bi-directional Map between an NNI and a associated score for
+// ranking the quality of NNI.
 class RankedSetOfNNIs {
  public:
   void Insert(double, NNIOperation);
@@ -96,27 +97,26 @@ class RankedSetOfNNIs {
 };
 
 // Sorts a positional index array [0,1,2,3,...] with respect to input data array.
-template<typename T>
+template <typename T>
 std::vector<size_t> ArgSort(const std::vector<T> &data) {
   std::vector<size_t> sorted_index(data.size());
   std::iota(data.begin(), data.end(), 0);
-  std::sort(data.begin(), data.end(),
-    // Sort indices of sorted_index according to their index in input_array.
-    [&sorted_index, &data](int left, int right) {
-      return data[left] < data[right];
-  });
+  std::sort(
+      data.begin(), data.end(),
+      // Sort indices of sorted_index according to their index in input_array.
+      [&sorted_index, &data](int left, int right) { return data[left] < data[right]; });
   return sorted_index;
 };
 
-// // Maintains an sorted index vector with respect to a reference data array.
-// template<typename T, std::function<int(T,T)>
-// class ArgsortVector {
-//  public:
+  // // Maintains an sorted index vector with respect to a reference data array.
+  // template<typename T, std::function<int(T,T)>
+  // class ArgsortVector {
+  //  public:
 
-//  private:
-//   std::vector<size_t> argsort_;
-//   std::vector<T> *data_;
-// };
+  //  private:
+  //   std::vector<size_t> argsort_;
+  //   std::vector<T> *data_;
+  // };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 

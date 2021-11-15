@@ -1,6 +1,8 @@
 // Copyright 2019-2021 bito project contributors.
 // bito is free software under the GPLv3; see LICENSE file for details.
 //
+// This is the comprehensive unit for performing Generalized Pruning.
+//
 
 #ifndef SRC_GP_INSTANCE_HPP_
 #define SRC_GP_INSTANCE_HPP_
@@ -12,23 +14,39 @@
 
 class GPInstance {
  public:
+  // Create instance with filepath for virtual memory map.
   explicit GPInstance(const std::string &mmap_file_path)
       : mmap_file_path_(mmap_file_path) {
     if (mmap_file_path.empty()) {
       Failwith("GPInstance needs a legal path as a constructor argument.");
     }
   };
+
+  // Print following GPInstance's to console:
+  //  - Number of trees, Number of taxa/leaves.
+  //  - Number of alignment sequences.
+  //  - Number of SubsplitDAG nodes, Number of possible tree topologies in DAG.
+  //  - Number of continuous parameters (this is the same as branch lengths/edges).
+  //  - Amount of virtual memory used by Engine (or whether engine has been made).
   void PrintStatus();
 
+  // Load fasta file and overwrites/adds all sequences to alignment_.
   void ReadFastaFile(const std::string &fname);
+  // Load newick file and overwrites/adds all trees to tree_collection_.
   void ReadNewickFile(const std::string &fname);
+  // Load compressed newick file and overwrites/adds all trees to tree_collection_.
   void ReadNewickFileGZ(const std::string &fname);
+  // Load nexus file and overwrites/adds all trees to tree_collection_.
   void ReadNexusFile(const std::string &fname);
+  // Load compressed nexus file and overwrites/adds all trees to tree_collection_.
   void ReadNexusFileGZ(const std::string &fname);
 
+  // Initialize DAG and GPEngine. Assumes uniform distribution on topological support.
+  // NOTE: Requires that sequences and trees have already been loaded.
   void MakeEngine(double rescaling_threshold = GPEngine::default_rescaling_threshold_);
   GPEngine *GetEngine() const;
   bool HasEngine() const;
+
   GPDAG &GetDAG();
   void PrintDAG();
   void PrintGPCSPIndexer();
@@ -80,7 +98,18 @@ class GPInstance {
   void SubsplitDAGToDot(const std::string &out_path, bool show_index_labels = true);
 
   // Add parent-child node pair to dag and reorganize underlying data.
-  void AddNodePair(const Bitset& parent_bitset, const Bitset& child_bitset);
+  void AddNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
+
+ private:
+  void ClearTreeCollectionAssociatedState();
+  // Verify that sequences and
+  void CheckSequencesAndTreesLoaded() const;
+
+  size_t GetGPCSPIndexForLeafNode(const Bitset &parent_subsplit,
+                                  const Node *leaf_node) const;
+  RootedTreeCollection TreesWithGPBranchLengthsOfTopologies(
+      Node::NodePtrVec &&topologies) const;
+  StringDoubleVector PrettyIndexedVector(EigenConstVectorXdRef v);
 
  private:
   std::string mmap_file_path_;
@@ -89,15 +118,6 @@ class GPInstance {
   RootedTreeCollection tree_collection_;
   GPDAG dag_;
   static constexpr size_t plv_count_per_node_ = 6;
-
-  void ClearTreeCollectionAssociatedState();
-  void CheckSequencesAndTreesLoaded() const;
-
-  size_t GetGPCSPIndexForLeafNode(const Bitset &parent_subsplit,
-                                  const Node *leaf_node) const;
-  RootedTreeCollection TreesWithGPBranchLengthsOfTopologies(
-      Node::NodePtrVec &&topologies) const;
-  StringDoubleVector PrettyIndexedVector(EigenConstVectorXdRef v);
 };
 
 #endif  // SRC_GP_INSTANCE_HPP_

@@ -35,8 +35,10 @@ class Bitset {
 
   // ** std::bitset Interface Methods
   // These methods are modeled after the std::bitset interface.
-  //
+
+  // Get ith bit in Bitset.
   bool operator[](size_t i) const;
+  // Get the number of bits in Bitset.
   size_t size() const;
   // Set given index to true.
   void set(size_t i, bool value = true);
@@ -70,12 +72,13 @@ class Bitset {
 
   // ** Bitset Methods
   // These methods are not from the std::bitset interface.
-  //
+
   // Special Constructors:
   // Make a bitset with only the specified entry turned on.
   static Bitset Singleton(size_t n, size_t which_on);
   // Sets entire bitset to false.
   void Zero();
+
   // Generates hash value from bitset.
   size_t Hash() const;
   // Outputs bitset as a string of "1" and "0"s.
@@ -114,7 +117,7 @@ class Bitset {
   // There are bitset "types" composed of multiple clades (here, called a
   // MultiClade). Subsplits are composed of two clades and PCSPs are composed of three
   // clades.
-  //
+
   // Comparator: Clades are sorted with respect to the lexigraphical representation of
   // their taxon subset. (e.g. If two clades are "010" and "101", then their taxon
   // subsets are {b} and {a,c}. "b" > "a", therefore "010" > "101".) Note: Sorting by
@@ -138,10 +141,11 @@ class Bitset {
   // sides of the subsplit. Clades are stored in a sorted order wrt to their
   // lexicographic taxon ordering: the smaller "left" or "sorted" clade stored in the
   // 0-position, and the larger "right" or "rotated" clade in the 1-position.
-  //
+
   // Constructors:
   // Each argument represents one of the clade of the subsplit.
   // Each clade follows the corresponding Bitset constructor.
+  //
   // Build a Subsplit bitset out of a compatible pair of clades.
   static Bitset Subsplit(const Bitset &clade_0, const Bitset &clade_1);
   // Builds Clades from strings of "1" and "0" characters.
@@ -237,7 +241,7 @@ class Bitset {
   // is the sister clade (all 0s), the focal clade (all 1s), and "clade 0". For
   // example, `000111010` is the PCSP from the DAG root node to the rootsplit (AC, B).
   // See the unit tests at the bottom for more examples.
-  //
+
   // Constructors:
   // Build a PCSP bitset from a compatible parent-child pair of
   // Subsplit bitsets.
@@ -280,7 +284,9 @@ class Bitset {
   // Get the number of taxa in each side of the child subsplit.
   SizePair PCSPGetChildSubsplitTaxonCounts() const;
 
- private:
+ protected:
+  // ** Data
+  // Vector of bits.
   std::vector<bool> value_;
 };
 

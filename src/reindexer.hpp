@@ -51,7 +51,6 @@ inline VectorType Reindex(VectorType &old_vector, const SizeVector &reindexer) {
   return new_vector;
 }
 
-
 // Reindexes the given vector concatenated with some additional values.
 template <typename VectorType>
 inline VectorType Reindex(VectorType &old_vector, const SizeVector &reindexer,

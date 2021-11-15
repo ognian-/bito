@@ -612,30 +612,30 @@ TEST_CASE("GPInstance: test rootsplits") {
 }
 
 // See diagram at https://github.com/phylovi/bito/issues/351#issuecomment-908707617.
-TEST_CASE("GPInstance: IsValidNewNodePair tests") {
+TEST_CASE("GPInstance: IsValidAddNodePair tests") {
   const std::string fasta_path = "data/five_taxon.fasta";
   auto inst = GPInstanceOfFiles(fasta_path, "data/five_taxon_rooted_more_2.nwk");
   auto& dag = inst.GetDAG();
   // Nodes are not adjacent (12|34 and 2|4).
-  CHECK(!dag.IsValidNewNodePair(Bitset::Subsplit("01100", "00011"),
+  CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("01100", "00011"),
                                 Bitset::Subsplit("00100", "00001")));
   // Nodes have 5 taxa while the DAG has 4 (12|34 and 1|2).
-  CHECK(!dag.IsValidNewNodePair(Bitset::Subsplit("011000", "000110"),
+  CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("011000", "000110"),
                                 Bitset::Subsplit("010000", "001000")));
   // Parent node does not have a parent (12|3 and 1|2).
-  CHECK(!dag.IsValidNewNodePair(Bitset::Subsplit("01100", "00010"),
+  CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("01100", "00010"),
                                 Bitset::Subsplit("01000", "00100")));
   // Rotated clade of the parent node does not have a child (02|134 and 1|34).
-  CHECK(!dag.IsValidNewNodePair(Bitset::Subsplit("10100", "01011"),
+  CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("10100", "01011"),
                                 Bitset::Subsplit("01000", "00011")));
   // Rotated clade of the child node does not have a child (0123|4 and 023|1).
-  CHECK(!dag.IsValidNewNodePair(Bitset::Subsplit("11110", "00001"),
+  CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("11110", "00001"),
                                 Bitset::Subsplit("10110", "01000")));
   // Sorted clade of the child node does not have a child (0123|4 and 0|123).
-  CHECK(!dag.IsValidNewNodePair(Bitset::Subsplit("11110", "00001"),
+  CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("11110", "00001"),
                                 Bitset::Subsplit("10000", "01110")));
   // Valid new node pair (0123|4 and 012|3).
-  CHECK(dag.IsValidNewNodePair(Bitset::Subsplit("11110", "00001"),
+  CHECK(dag.IsValidAddNodePair(Bitset::Subsplit("11110", "00001"),
                                Bitset::Subsplit("11100", "00010")));
 }
 
@@ -727,7 +727,7 @@ TEST_CASE("GPInstance: AddNodePair tests") {
   CHECK_EQ(dag.GPCSPIndexOfIds(14, 13), 8);
   CHECK_EQ(dag.GPCSPIndexOfIds(16, 13), 12);
   CHECK_EQ(dag.GPCSPIndexOfIds(11, 4), 25);
-  // Check that `parent_to_range_` was updated.
+  // Check that `parent_to_child_range_` was updated.
   CHECK_EQ(dag.GetEdgeRange(node_14->GetBitset(), false).second, 9);
   CHECK_EQ(dag.GetEdgeRange(dag.GetDAGNode(16)->GetBitset(), false).first, 11);
   CHECK_EQ(dag.GetEdgeRange(dag.GetDAGNode(16)->GetBitset(), false).second, 13);
@@ -780,8 +780,8 @@ TEST_CASE("GPInstance: Only add child node tests") {
   CHECK_EQ(dag.GetEdgeRange(dag.GetDAGNode(11)->GetBitset(), false).second, 5);
 }
 
-// This test builds a DAG, tests if engine generates the same set of adjacent NNI's and manually created set.
-// Then adds a node pair to DAG, and tests if engine updates 
+// This test builds a DAG, tests if engine generates the same set of adjacent NNI's and
+// manually created set. Then adds a node pair to DAG, and tests if engine updates
 TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
   // Simple DAG that contains a shared edge, internal leafward fork, and an internal
   // rootward fork.
@@ -789,19 +789,13 @@ TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
   auto inst = GPInstanceOfFiles(fasta_path, "data/six_taxon_rooted_simple.nwk");
   GPDAG& dag = inst.GetDAG();
 
-  std::cout << "build instance" << std::endl;
-
   auto correct_adjacent_nnis = SetOfNNIs();
 
   auto nni_engine = NNIEvaluationEngine(dag);
   auto nni_engine_2 = NNIEvaluationEngine(dag);
 
-  std::cout << "build engines" << std::endl;
-
   // Build NNI Set from current DAG state.
   nni_engine.SyncSetOfNNIsWithDAG();
-
-  std::cout << "sync" << std::endl;
 
   // Functions for quick manual insertion/removal for Correct NNI Set.
   auto InsertNNI = [&correct_adjacent_nnis](Bitset parent, Bitset child) {
@@ -812,8 +806,6 @@ TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
     auto nni = NNIOperation(parent, child);
     correct_adjacent_nnis.Erase(nni);
   };
-
-  std::cout << "manual sync" << std::endl;
 
   // For images and notes describing this part of the test case, see
   // https://github.com/phylovi/bito/pull/366#issuecomment-920454401
@@ -847,15 +839,9 @@ TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
   InsertNNI(Bitset::Subsplit("000100", "000011"),
             Bitset::Subsplit("000010", "000001"));  // (3|45)-(4|5)
 
-  std::cout << "begin test sync" << std::endl;
-  
   // Check that `BuildSetOfNNIs()` added correct set of nnis.
   SetOfNNIs& adjacent_nnis = nni_engine.GetAdjacentNNIs();
-  std::cout << "get nni" << std::endl;
-
   CHECK_EQ(adjacent_nnis, correct_adjacent_nnis);
-
-  std::cout << "test sync" << std::endl;
 
   // Now we add a node pair to DAG so we can check UpdateSetOfNNIsAfterAddNodePair.
   // see https://github.com/phylovi/bito/pull/366#issuecomment-922781415
@@ -863,9 +849,6 @@ TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
       std::make_pair(Bitset::Subsplit("000110", "001001"),
                      Bitset::Subsplit("001000", "000001"));  // (34|25)-(2|5)
   dag.AddNodePair(nni_to_add.first, nni_to_add.second);
-
-  std::cout << "add node pair" << std::endl;
-
 
   // Update NNI.
   nni_engine.UpdateSetOfNNIsAfterDAGAddNodePair(nni_to_add.first, nni_to_add.second);
@@ -887,12 +870,8 @@ TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
   // Check that `UpdateSetOfNNIsAfterAddNodePair()` updated correctly.
   CHECK_EQ(nni_engine.GetAdjacentNNIs(), correct_adjacent_nnis);
 
-  std::cout << "test add node pair" << std::endl;
-
   // Build NNI Set from current DAG state from scratch.
   nni_engine_2.SyncSetOfNNIsWithDAG();
-
-  std::cout << "sync 2" << std::endl;
 
   CHECK_EQ(nni_engine_2.GetAdjacentNNIs(), correct_adjacent_nnis);
 }
@@ -900,10 +879,64 @@ TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
 //
 TEST_CASE("NNI Engine: Simplest Evaluation Test") {
   const std::string fasta_path = "data/four_taxon.fasta";
-  auto inst_before = GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni.nwk");
-  GPDAG& dag_A = inst_before.GetDAG();
-  auto inst_after = GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_after_nni.nwk");
-  GPDAG& dag_B = inst_before.GetDAG();
 
-  
+  // dag_A is a SubsplitDAG created from a single simple tree topology.
+  auto inst_A =
+      GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_1.nwk");
+  GPDAG& dag_A = inst_A.GetDAG();
+
+  // dag_A is a SubsplitDAG created from a single simple tree topology.
+  auto inst_A_1 =
+      GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_1.nwk");
+  GPDAG& dag_A_1 = inst_A_1.GetDAG();
+
+  // dag_A is a SubsplitDAG created from a single simple tree topology.
+  auto inst_A_2 =
+      GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_2.nwk");
+  GPDAG& dag_A_2 = inst_A_2.GetDAG();
+
+  std::cout << "dag_A_1: [ ";
+  for (const auto &bitset : dag_A_1.GetSetOfNodeBitsets()) {
+    std::cout <<  bitset.SubsplitToString() << " ";
+  }
+  std::cout << "]" << std::endl;
+  std::cout << "dag_A_2: [ ";
+  for (const auto &bitset : dag_A_2.GetSetOfNodeBitsets()) {
+    std::cout <<  bitset.SubsplitToString() << " ";
+  }
+  std::cout << "]" << std::endl;
+
+  // dag_B is a SubsplitDAG created from two tree topologies: the dag_A tree, as well as
+  // a tree created by an NNI operation on the dag_A tree.  This should be equivalent to
+  // the result of AddDAGNode().
+  auto inst_B = GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_after_nni.nwk");
+  GPDAG& dag_B = inst_B.GetDAG();
+
+  // Pairs to add/remove.
+  std::pair<Bitset,Bitset> pair_1 = std::make_pair(Bitset::Subsplit("0010", "0101"),
+                                                   Bitset::Subsplit("0001", "0100"));
+  std::pair<Bitset,Bitset> pair_2 = std::make_pair(Bitset::Subsplit("0010", "0101"),
+                                                   Bitset::Subsplit("0100", "0001"));
+
+  // Add missing NNI to dag_A_1.
+  dag_A_1.AddNodePair(pair_1.first, pair_1.second);
+  // Add missing NNI to dag_A_2.
+  dag_A_2.AddNodePair(pair_2.first, pair_2.second);
+
+  CHECK(SubsplitDAG::Compare(dag_A_1,dag_B) == 0);
+  CHECK(SubsplitDAG::Compare(dag_A_2,dag_B) == 0);
+
+  std::cout << "dag_B: [ ";
+  for (const auto &bitset : dag_B.GetSetOfNodeBitsets()) {
+    std::cout <<  bitset.SubsplitToString() << " ";
+  }
+  std::cout << "]" << std::endl;
+  std::cout << "Add: [ " << pair_1.first.SubsplitToString() << " " << 
+                            pair_1.second.SubsplitToString() << " ]" << std::endl;
+
+  // Remove extra NNI from dag_B.
+  dag_B.RemoveNodePair(Bitset::Subsplit("0010", "0101"),
+                       Bitset::Subsplit("0001", "0100"));
+
+  CHECK(SubsplitDAG::Compare(dag_A,dag_B) == 0);
 }

@@ -62,6 +62,7 @@ class SubsplitDAGNode {
     Reindexer::RemapIdVector(rootward_sorted_, node_reindexer);
   }
 
+  bool IsValid() const;
   std::string ToString() const;
 
  private:

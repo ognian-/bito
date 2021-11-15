@@ -22,12 +22,12 @@ NNIEvaluationEngine::NNIEvaluationEngine(GPDAG &dag_src) {
 // TODO:
 void NNIEvaluationEngine::Runner() {
   bool termination_criteria = true;
-  
+
   // (0a) Initialize NNI Set based on state of DAG.
   SyncSetOfNNIsWithDAG();
   // (0b) Evaluate likelihood of all possible NNIs.
   // for (auto &nni : adjacent_nnis_) {
-  //   EvaluateNNI(nni);
+  //   ranked_nnis_.insert(nni, EvaluateNNI(nni));
   // }
 
   while (termination_criteria) {
@@ -36,7 +36,7 @@ void NNIEvaluationEngine::Runner() {
       break;
     }
     // (1) Add the best NNI from adjacent NNIs to the DAG.
-    NNIOperation best_nni = ranked_nnis_.GetMaxNNI();
+    // NNIOperation best_nni = ranked_nnis_.GetMaxNNI();
     // dag_->AddNodePair(best_nni.parent_, best_nni.child_);
     // (2) Update set of all NNIs to reflect added NNI.
     // UpdateSetOfNNIsAfterDAGAddNodePair(best_nni.parent_, best_nni.child_);
@@ -48,10 +48,24 @@ void NNIEvaluationEngine::Runner() {
   }
 }
 
-// ** Evaluation Methods
+// ** Evaluate Methods
 
-void NNIEvaluationEngine::EvaluateNNI(NNIOperation& proposed_nni) {
+void Evaluate() {}
 
+void NaiveEvaluate() {}
+
+// ** Individual NNI Evaluation Methods
+
+double NNIEvaluationEngine::EvaluateNNI(NNIOperation &proposed_nni) {
+  return NaiveEvaluateNNI(proposed_nni);
+}
+
+double NNIEvaluationEngine::NaiveEvaluateNNI(NNIOperation &proposed_nni) {
+  dag_->AddNodePair(proposed_nni.parent_, proposed_nni.child_);
+
+  // dag_->RemoveNodePair(proposed_nni.parent_, proposed_nni.child_);
+
+  return 0.0f;
 }
 
 // ** Maintainence Methods
@@ -133,6 +147,8 @@ void NNIEvaluationEngine::SafeAddOutputNNIsToSetOfNNIs(const Bitset &parent_bits
     bool is_in_dag = false;
     const auto new_nni = NNIOperation::NNIOperationFromNeighboringSubsplits(
         parent_bitset, child_bitset, is_swap_with_sorted_child, !is_edge_rotated);
+    // If DAG already contains output parent and child nodes, and an edge between them,
+    // then don't add it to the adjacent_nnis.
     if (dag_->ContainsNode(new_nni.parent_) && dag_->ContainsNode(new_nni.child_)) {
       const size_t parent_id = dag_->GetDAGNodeId(new_nni.parent_);
       const size_t child_id = dag_->GetDAGNodeId(new_nni.child_);
@@ -143,4 +159,3 @@ void NNIEvaluationEngine::SafeAddOutputNNIsToSetOfNNIs(const Bitset &parent_bits
     }
   }
 }
-

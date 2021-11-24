@@ -159,7 +159,8 @@ class TidySubsplitDAG : public SubsplitDAG {
   // This constructor is really just meant for testing.
   explicit TidySubsplitDAG(size_t node_count);
 
-  TidySubsplitDAG(size_t taxon_count, const Node::TopologyCounter &topology_counter);
+  TidySubsplitDAG(size_t taxon_count, const Node::TopologyCounter &topology_counter,
+                  const TagStringMap &tag_taxon_map);
 
   // Set the below matrix up to have all of the nodes below src_id below the
   // subsplit-clade described by (dst_rotated, dst_id). Meant to be used as part of a

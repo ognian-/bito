@@ -25,6 +25,8 @@ class NNIEvaluationEngine {
   GPDAG *GetReferenceGPDAG() { return dag_; };
   //
   SetOfNNIs &GetAdjacentNNIs() { return adjacent_nnis_; };
+  //
+  size_t GetAdjacentNNICount() { return adjacent_nnis_.GetSize(); };
 
   // ** Runner Methods:
   // These start the engine, which procedurally ranks and adds (and
@@ -43,11 +45,14 @@ class NNIEvaluationEngine {
   // removes NNI from DAG.
   void NaiveEvaluate();
   //
-  // Individual NNI Evaluation.
+  // Method Selector for Individual NNI Evaluation.
   double EvaluateNNI(NNIOperation &proposed_nni);
   // Naive Implementation of NNI Evaluation.
   // Simply adds node pair to DAG, computes NNI score, then removes NNI.
   double NaiveEvaluateNNI(NNIOperation &proposed_nni);
+  // Graft-based Implementation of NNI Evaluation.
+  // Constructs graft for adding node pair to DAG, uses it to compute NNI score.
+  double GraftEvaluateNNI(NNIOperation &proposed_nni);
 
   // ** Maintainence Methods:
   // These maintain SetOfNNIs to stay consistent with the state of associated DAG.
@@ -74,11 +79,13 @@ class NNIEvaluationEngine {
 
  private:
   GPDAG dag_src_;
+  // TODO: Maybe have dag refs be passed as argument by gp_instance?
   GPDAG *dag_;
 
   SetOfNNIs adjacent_nnis_;
   GPDAG nni_partial_dag_;
   RankedSetOfNNIs ranked_nnis_;
+  // SubsplitDAGGraft proposed_nni_;
 };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

@@ -16,6 +16,7 @@
 #include "rooted_tree_collection.hpp"
 #include "sbn_maps.hpp"
 #include "site_pattern.hpp"
+#include "subsplit_dag_graft.hpp"
 #include "substitution_model.hpp"
 
 class GPEngine {
@@ -37,9 +38,18 @@ class GPEngine {
   void operator()(const GPOperations::UpdateSBNProbabilities& op);
   void operator()(const GPOperations::PrepForMarginalization& op);
 
-  // Reindex GPEngine data for after a node pair has been added to the DAG.
-  void ReindexAfterAddNodePair(const SizeVector& node_reindexer,
-                               const SizeVector& edge_reindexer);
+  // Update stats and resize data to reflect SubsplitDAG after modification.
+  void Initialize(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
+                  const std::string& mmap_file_path, double rescaling_threshold,
+                  EigenVectorXd sbn_prior,
+                  EigenVectorXd unconditional_node_probabilities,
+                  EigenVectorXd inverted_sbn_prior);
+  // Update stats and resize data to reflect SubsplitDAG after modification.
+  void UpdateAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
+                            size_t gpcsp_count, const std::string& mmap_file_path,
+                            double rescaling_threshold, EigenVectorXd sbn_prior,
+                            EigenVectorXd unconditional_node_probabilities,
+                            EigenVectorXd inverted_sbn_prior);
 
   // Apply all operations in vector in order from beginning to end.
   void ProcessOperations(GPOperationVector operations);
@@ -81,6 +91,20 @@ class GPEngine {
   // hybrid_marginal_log_likelihoods_.
   void ProcessQuartetHybridRequest(const QuartetHybridRequest& request);
 
+  // ** Calculate Hybrid Likelihoods with Graft
+  // A SubsplitDAGGraft is a proposed (graft) set of nodes and edges to be added to the
+  // (host) SubsplitDAG but have not been formally indexed into the data structure.
+  // These functions can operate on the DAG and the graft as if they were a singular
+  // object.
+
+  // Calculate a vector of likelihoods, one for each summand of the hybrid marginal.
+  EigenVectorXd CalculateQuartetHybridLikelihoodsWithGraft(
+      const SubsplitDAGGraft& graft, const QuartetHybridRequest& request);
+  // Calculate the actual hybrid marginal and store it in the corresponding entry of
+  // hybrid_marginal_log_likelihoods_.
+  void ProcessQuartetHybridRequestWithGraft(const SubsplitDAGGraft& graft,
+                                            const QuartetHybridRequest& request);
+
   void PrintPLV(size_t plv_idx);
 
   // Use branch lengths from loaded sample as a starting point for optimization.
@@ -92,6 +116,7 @@ class GPEngine {
   double PLVByteCount() const { return mmapped_master_plv_.ByteCount(); };
 
  private:
+  //
   void InitializePLVsWithSitePatterns();
 
   void RescalePLV(size_t plv_idx, int amount);
@@ -134,10 +159,13 @@ class GPEngine {
   }
 
  public:
+  //
   static constexpr double default_rescaling_threshold_ = 1e-40;
+  // Initial branch length during first branch length opimization.
   static constexpr double default_branch_length_ = 0.1;
 
  private:
+  // Absolute upper and lower bounds for possible branch lengths in log space (used during optimization).
   static constexpr double min_log_branch_length_ = -13.9;
   static constexpr double max_log_branch_length_ = 1.1;
 
@@ -150,16 +178,20 @@ class GPEngine {
   // Entry j stores the marginal log likelihood over all trees at site pattern
   // j.
   EigenVectorXd log_marginal_likelihood_;
-
   // This vector is indexed by the GPCSPs and stores the hybrid marginals if they are
   // available.
   EigenVectorXd hybrid_marginal_log_likelihoods_;
-
+  // Descriptor containing all taxons and sequence alignments.
   SitePattern site_pattern_;
+  // Total number of PLV across entire DAG: plv_per_node * node_count
   size_t plv_count_;
+  //
   const double rescaling_threshold_;
+  // Rescaling threshold in log space.
   const double log_rescaling_threshold_;
+  // 
   MmappedNucleotidePLV mmapped_master_plv_;
+  // Partial Likelihood Vectors
   // plvs_ store the following (see GPDAG::GetPLVIndexStatic):
   // [0, num_nodes): p(s).
   // [num_nodes, 2*num_nodes): phat(s).
@@ -168,10 +200,13 @@ class GPEngine {
   // [4*num_nodes, 5*num_nodes): r(s).
   // [5*num_nodes, 6*num_nodes): r(s_tilde).
   NucleotidePLVRefVector plvs_;
+  //
   EigenVectorXi rescaling_counts_;
   // branch_lengths_, q_, etc. are indexed in the same way as sbn_parameters_ in
   // gp_instance.
   EigenVectorXd branch_lengths_;
+  // TODO: Add descriptions.
+  //
   EigenVectorXd q_;
   EigenVectorXd unconditional_node_probabilities_;
   EigenVectorXd inverted_sbn_prior_;

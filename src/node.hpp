@@ -48,6 +48,8 @@ class Node {
   using NodePtr = std::shared_ptr<Node>;
   using NodePtrVec = std::vector<NodePtr>;
   using NodePtrVecPtr = std::shared_ptr<NodePtrVec>;
+  // TODO: Definition?
+  // A TopologyCounter
   using TopologyCounter = std::unordered_map<NodePtr, uint32_t>;
   // This is the type of functions that are used in the PCSP recursion
   // functions. See `doc/svg/pcsp.svg` for a diagram of the PCSP traversal. In that
@@ -188,13 +190,18 @@ class Node {
   static size_t SORotate(size_t n, uint32_t c);
 
  private:
+  // Vector of direct child descendents of node in tree topology.
   NodePtrVec children_;
-  // See beginning of file for notes about the id and the leaves.
+  // NOTE: See beginning of file for notes about the id and the leaves.
+  // Unique identifier in tree containing node.
   size_t id_;
+  // Bitset of all leaves below node (alternatively can view a leaf as a member of the
+  // taxon set in the tree).
   Bitset leaves_;
   // The tag_ is a pair of packed integers representing (1) the maximum leaf ID
   // of the leaves below this node, and (2) the number of leaves below the node.
   uint64_t tag_;
+  // Hashkey for node maps.
   size_t hash_;
 
   // Make copy constructors private to eliminate copying.
@@ -203,7 +210,7 @@ class Node {
 
   // This is a private Postorder that can change the Node.
   void MutablePostorder(std::function<void(Node*)> f);
-
+  // Helper function for Node::Newick().
   std::string NewickAux(std::function<std::string(const Node*)> node_labeler,
                         const DoubleVectorOption& branch_lengths) const;
 
@@ -220,7 +227,6 @@ inline bool operator==(const Node::NodePtr& lhs, const Node::NodePtr& rhs) {
 inline bool operator!=(const Node::NodePtr& lhs, const Node::NodePtr& rhs) {
   return !(lhs == rhs);
 }
-
 namespace std {
 template <>
 struct hash<Node::NodePtr> {

@@ -36,11 +36,30 @@ class SubsplitDAGNode {
   bool IsRootsplit() const { return subsplit_.SubsplitIsRootsplit(); }
   bool IsLeaf() const { return leafward_rotated_.empty() && leafward_sorted_.empty(); }
 
+  // Add edge from adjacent node to node.
+  void AddEdge(size_t adjacent_node_id, bool is_leafward, bool is_rotated) {
+    if (is_leafward) {
+      is_rotated ? AddLeafwardRotated(adjacent_node_id)
+                 : AddLeafwardSorted(adjacent_node_id);
+    } else {
+      is_rotated ? AddRootwardRotated(adjacent_node_id)
+                 : AddRootwardSorted(adjacent_node_id);
+    }
+  }
   void AddLeafwardRotated(size_t node_id) { leafward_rotated_.push_back(node_id); }
   void AddLeafwardSorted(size_t node_id) { leafward_sorted_.push_back(node_id); }
   void AddRootwardRotated(size_t node_id) { rootward_rotated_.push_back(node_id); }
   void AddRootwardSorted(size_t node_id) { rootward_sorted_.push_back(node_id); }
+
   // #350 use enumerated types for rotated?
+  // Get vector of all adjacent node vectors along the specified direction.
+  void GetEdge(bool is_leafward, bool is_rotated) {
+    if (is_leafward) {
+      is_rotated ? GetLeafwardRotated() : GetLeafwardSorted();
+    } else {
+      is_rotated ? GetRootwardRotated() : GetRootwardSorted();
+    }
+  }
   const SizeVector &GetLeafwardOrRootward(bool leafward, bool rotated) const {
     return leafward ? GetLeafward(rotated) : GetRootward(rotated);
   };
@@ -66,9 +85,13 @@ class SubsplitDAGNode {
   std::string ToString() const;
 
  private:
+  // Node unique identifier.  Corresponds to the positional index in SubsplitDAG's
+  // dag_nodes_.
   size_t id_;
+  // Node bitset subsplit clades.
   const Bitset subsplit_;
 
+  // List of adjacent nodes in all directions.
   SizeVector leafward_rotated_;
   SizeVector leafward_sorted_;
   SizeVector rootward_rotated_;

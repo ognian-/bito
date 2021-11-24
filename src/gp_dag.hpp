@@ -4,6 +4,7 @@
 // The purpose of this class is to hold a DAG that we use to build up the operations for
 // the generalized pruning operations. Note that rootsplit PCSPs and the DAG root node
 // are excluded from operations.
+// GPOperationVectors are then consumed and calculated by GPEngine::ProcessOperations().
 
 #ifndef SRC_GP_DAG_HPP_
 #define SRC_GP_DAG_HPP_
@@ -28,6 +29,11 @@ class GPDAG : public TidySubsplitDAG {
   // Get the index of a PLV of a given type and with a given index.
   static size_t GetPLVIndexStatic(PLVType plv_type, size_t node_count, size_t src_idx);
   size_t GetPLVIndex(PLVType plv_type, size_t src_idx) const;
+
+  // ** GPOperations:
+  // These methods generate a serial vector of operations, but perform no computation.
+  // These operation vectors can then be computed and consumed by the
+  // GPEngine::ProcessOperations().
 
   // Optimize branch lengths without handling out of date PLVs.
   [[nodiscard]] GPOperationVector ApproximateBranchLengthOptimization() const;
@@ -55,6 +61,7 @@ class GPDAG : public TidySubsplitDAG {
   // Set p-PLVs to zero.
   [[nodiscard]] GPOperationVector SetRootwardZero() const;
 
+  // TODO: This needs a description.
   QuartetHybridRequest QuartetHybridRequestOf(size_t parent_id, bool rotated,
                                               size_t child_id) const;
 

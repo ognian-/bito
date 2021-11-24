@@ -31,7 +31,7 @@ class NNIOperation {
  public:
   NNIOperation(Bitset parent, Bitset child) : parent_(parent), child_(child){};
 
-  // Comparator:
+  // ** Comparator:
   // NNIOperations are ordered according to the std::bitset ordering of their parent
   // subsplit, then the std::bitset order their child subsplit.
   static int Compare(const NNIOperation &nni_a, const NNIOperation &nni_b);
@@ -42,7 +42,7 @@ class NNIOperation {
   friend bool operator==(const NNIOperation &lhs, const NNIOperation &rhs);
   friend bool operator!=(const NNIOperation &lhs, const NNIOperation &rhs);
 
-  // Special Constructors:
+  // ** Special Constructors:
   // Produces the output NNIOperation from an input subsplit pair that results from an
   // NNI Swap according to `swap_which_child_clade_with_sister`.
   static NNIOperation NNIOperationFromNeighboringSubsplits(
@@ -79,7 +79,8 @@ class SetOfNNIs : protected std::set<NNIOperation> {
   std::set<NNIOperation>::iterator End() const { return end(); };
 };
 
-// RankedSetOfNNIs: // Bi-directional Map between an NNI and a associated score for
+// TODO:
+// RankedSetOfNNIs: Bi-directional sorted set between an NNI and a associated score for
 // ranking the quality of NNI.
 class RankedSetOfNNIs {
  public:
@@ -92,31 +93,10 @@ class RankedSetOfNNIs {
   double GetMaxScore() const { return score_to_nni_.rbegin()->first; };
   NNIOperation GetMaxNNI() const { return score_to_nni_.rbegin()->second; };
 
+  // TODO: Store underlying data in vectors and bimap as pointers/indexes.
+  std::set<std::pair<NNIOperation, double>> nni_to_score_;
   std::set<std::pair<double, NNIOperation>> score_to_nni_;
-  std::set<std::pair<double, NNIOperation>> nni_to_score_;
 };
-
-// Sorts a positional index array [0,1,2,3,...] with respect to input data array.
-template <typename T>
-std::vector<size_t> ArgSort(const std::vector<T> &data) {
-  std::vector<size_t> sorted_index(data.size());
-  std::iota(data.begin(), data.end(), 0);
-  std::sort(
-      data.begin(), data.end(),
-      // Sort indices of sorted_index according to their index in input_array.
-      [&sorted_index, &data](int left, int right) { return data[left] < data[right]; });
-  return sorted_index;
-};
-
-  // // Maintains an sorted index vector with respect to a reference data array.
-  // template<typename T, std::function<int(T,T)>
-  // class ArgsortVector {
-  //  public:
-
-  //  private:
-  //   std::vector<size_t> argsort_;
-  //   std::vector<T> *data_;
-  // };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 

@@ -436,18 +436,18 @@ bool Bitset::SubsplitIsValid() const {
 // ** PCSP functions
 
 Bitset Bitset::PCSP(const Bitset& parent_subsplit, const Bitset& child_subsplit) {
+  // Assert that:
+  // - child_subsplit is eithat a sorted or rotated child of parent_subsplit.
+  // - child_subsplit forms a valid subsplit.
   Assert((child_subsplit.SubsplitIsRotatedChildOf(parent_subsplit) ||
           child_subsplit.SubsplitIsSortedChildOf(parent_subsplit)) &&
              child_subsplit.SubsplitGetClade(0).IsDisjoint(
                  child_subsplit.SubsplitGetClade(1)),
          "PCSP(): given bitsets are not a valid parent/child pair.");
-  Bitset pcsp(3 * parent_subsplit.size() / 2);
-  pcsp.CopyFrom((child_subsplit.SubsplitIsRotatedChildOf(parent_subsplit)
+  Bitset pcsp = (child_subsplit.SubsplitIsRotatedChildOf(parent_subsplit)
                      ? parent_subsplit.SubsplitRotate()
-                     : parent_subsplit),
-                0, false);
-  pcsp.CopyFrom(child_subsplit.SubsplitGetCladeByBinaryOrder(0), parent_subsplit.size(),
-                false);
+                     : parent_subsplit) +
+                (child_subsplit.SubsplitGetCladeByBinaryOrder(0));
   return pcsp;
 }
 
@@ -513,6 +513,12 @@ bool Bitset::PCSPIsFake() const {
   // If third clade of PCSP is empty, that means that the associated clade's sorted
   // subsplit is empty, so it is fake.
   return PCSPGetClade(2).None();
+}
+
+Bitset Bitset::PCSPSort() const {
+  Bitset parent = PCSPGetParentSubsplit();
+  Bitset child = PCSPGetChildSubsplit();
+  return Bitset::PCSP(parent, child);
 }
 
 bool Bitset::PCSPIsParentRootsplit() const {

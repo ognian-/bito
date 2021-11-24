@@ -62,11 +62,13 @@ double NNIEvaluationEngine::EvaluateNNI(NNIOperation &proposed_nni) {
 
 double NNIEvaluationEngine::NaiveEvaluateNNI(NNIOperation &proposed_nni) {
   dag_->AddNodePair(proposed_nni.parent_, proposed_nni.child_);
-
+  // dag_->QuartetHybridRequestOf(proposed_nni.parent_, proposed_nni.child_);
   // dag_->RemoveNodePair(proposed_nni.parent_, proposed_nni.child_);
 
   return 0.0f;
 }
+
+double NNIEvaluationEngine::GraftEvaluateNNI(NNIOperation &proposed_nni) {}
 
 // ** Maintainence Methods
 

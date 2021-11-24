@@ -79,14 +79,20 @@ void GPInstance::CheckSequencesAndTreesLoaded() const {
 
 void GPInstance::MakeEngine(double rescaling_threshold) {
   CheckSequencesAndTreesLoaded();
+  // TODO: Explain site patterns.
   SitePattern site_pattern(alignment_, tree_collection_.TagTaxonMap());
-
+  // Initialize the DAG (uses TidySubsplitDAG constructor).
   dag_ = GPDAG(tree_collection_);
+  // Initialize the GPEngine.
+  // Uniform support assigns each possible topology expressed by the DAG to have equal likelihood.
   auto sbn_prior = dag_.BuildUniformOnTopologicalSupportPrior();
+  // TODO:
   auto unconditional_node_probabilities =
       dag_.UnconditionalNodeProbabilities(sbn_prior);
+  // TODO:
   auto inverted_sbn_prior =
       dag_.InvertedGPCSPProbabilities(sbn_prior, unconditional_node_probabilities);
+  //
   engine_ = std::make_unique<GPEngine>(
       std::move(site_pattern), plv_count_per_node_ * (dag_.NodeCountWithoutDAGRoot()),
       dag_.GPCSPCountWithFakeSubsplits(), mmap_file_path_, rescaling_threshold,
@@ -206,7 +212,8 @@ void GPInstance::CalculateHybridMarginals() {
 size_t GPInstance::GetGPCSPIndexForLeafNode(const Bitset &parent_subsplit,
                                             const Node *leaf_node) const {
   Assert(leaf_node->IsLeaf(), "Only leaf node is permitted.");
-  return dag_.GetGPCSPIndex(parent_subsplit, Bitset::FakeSubsplit(leaf_node->Leaves()));
+  return dag_.GetGPCSPEdgeIdx(parent_subsplit,
+                              Bitset::FakeSubsplit(leaf_node->Leaves()));
 }
 
 RootedTreeCollection GPInstance::TreesWithGPBranchLengthsOfTopologies(
@@ -224,7 +231,7 @@ RootedTreeCollection GPInstance::TreesWithGPBranchLengthsOfTopologies(
             const Node *child1) {
           Bitset parent_subsplit = Bitset::Subsplit(sister->Leaves(), focal->Leaves());
           Bitset child_subsplit = Bitset::Subsplit(child0->Leaves(), child1->Leaves());
-          size_t gpcsp_idx = dag_.GetGPCSPIndex(parent_subsplit, child_subsplit);
+          size_t gpcsp_idx = dag_.GetGPCSPEdgeIdx(parent_subsplit, child_subsplit);
           branch_lengths[focal->Id()] = gpcsp_indexed_branch_lengths[gpcsp_idx];
 
           if (sister->IsLeaf()) {
@@ -370,4 +377,16 @@ void GPInstance::AddNodePair(const Bitset &parent_bitset, const Bitset &child_bi
   auto edge_reindexer = node_addition_result.edge_reindexer;
   // Reindex data
   // Reindexer::Reindex(, node_reindexer);
+
+  // If NNI Evaluation Engine has been initialized, then update NNIs.
+  if (nni_engine_) {
+    nni_engine_->UpdateSetOfNNIsAfterDAGAddNodePair(parent_bitset, child_bitset);
+  }
 }
+
+void GPInstance::MakeNNIEngine() {
+  nni_engine_ = std::make_unique<NNIEvaluationEngine>(dag_);
+  nni_engine_->SyncSetOfNNIsWithDAG();
+}
+
+size_t GPInstance::GetNNICount() { return nni_engine_->GetAdjacentNNICount(); }

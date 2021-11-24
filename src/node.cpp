@@ -390,6 +390,9 @@ std::string Node::NewickAux(std::function<std::string(const Node*)> node_labeler
 
 std::string Node::Newick(const DoubleVectorOption& branch_lengths,
                          const TagStringMapOption& node_labels, bool show_tags) const {
+  if (node_labels.has_value()) {
+  } else {
+  }
   return Newick(
       [&node_labels, &show_tags](const Node* node) {
         if (node->IsLeaf()) {

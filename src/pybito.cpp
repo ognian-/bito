@@ -433,7 +433,13 @@ PYBIND11_MODULE(bito, m) {
            "Estimate the SBN parameters based on current branch lengths.")
       .def("estimate_branch_lengths", &GPInstance::EstimateBranchLengths,
            "Estimate branch lengths for the GPInstance.", py::arg("tol"),
-           py::arg("max_iter"), py::arg("quiet") = false);
+           py::arg("max_iter"), py::arg("quiet") = false)
+
+      // ** Nearest Neighbor Interchange
+      .def("make_nni_engine", &GPInstance::MakeNNIEngine,
+           R"raw(Initialize NNI Evaluation Engine.)raw")
+      .def("adjacent_nni_count", &GPInstance::GetNNICount,
+           R"raw(Get number of adjacent NNIs to current DAG.)raw");
 
   // If you want to be sure to get all of the stdout and cerr messages, put your
   // Python code in a context like so:

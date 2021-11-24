@@ -9,6 +9,7 @@
 
 #include "gp_dag.hpp"
 #include "gp_engine.hpp"
+#include "nni_evaluation_engine.hpp"
 #include "rooted_tree_collection.hpp"
 #include "site_pattern.hpp"
 
@@ -22,7 +23,7 @@ class GPInstance {
     }
   };
 
-  // Print following GPInstance's to console:
+  // Print following GPInstance stats to console:
   //  - Number of trees, Number of taxa/leaves.
   //  - Number of alignment sequences.
   //  - Number of SubsplitDAG nodes, Number of possible tree topologies in DAG.
@@ -97,12 +98,26 @@ class GPInstance {
   // Export the subsplit DAG as a DOT file.
   void SubsplitDAGToDot(const std::string &out_path, bool show_index_labels = true);
 
+  // ** Modify DAG
+
   // Add parent-child node pair to dag and reorganize underlying data.
   void AddNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
 
+  // ** NNI Evaluation Engine
+
+  // Initialize NNI Evaluation Engine.
+  void MakeNNIEngine();
+  // Get the number of adjacent NNI's for current DAG.
+  size_t GetNNICount();
+
+  // ** Alignment
+
+  // Get taxon names.
+  StringVector GetTaxonNames() { return tree_collection_.TaxonNames(); }
+
  private:
   void ClearTreeCollectionAssociatedState();
-  // Verify that sequences and
+  // Verify that sequences and trees are nonempty.
   void CheckSequencesAndTreesLoaded() const;
 
   size_t GetGPCSPIndexForLeafNode(const Bitset &parent_subsplit,
@@ -117,6 +132,7 @@ class GPInstance {
   std::unique_ptr<GPEngine> engine_;
   RootedTreeCollection tree_collection_;
   GPDAG dag_;
+  std::unique_ptr<NNIEvaluationEngine> nni_engine_;
   static constexpr size_t plv_count_per_node_ = 6;
 };
 

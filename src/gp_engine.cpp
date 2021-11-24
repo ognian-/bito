@@ -20,9 +20,11 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
       q_(std::move(sbn_prior)),
       unconditional_node_probabilities_(std::move(unconditional_node_probabilities)),
       inverted_sbn_prior_(std::move(inverted_sbn_prior)) {
+
   Assert(plvs_.back().rows() == MmappedNucleotidePLV::base_count_ &&
              plvs_.back().cols() == site_pattern_.PatternCount(),
          "Didn't get the right shape of PLVs out of Subdivide.");
+  //
   rescaling_counts_.resize(plv_count_);
   rescaling_counts_.setZero();
   branch_lengths_.resize(gpcsp_count);
@@ -30,10 +32,10 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
   log_marginal_likelihood_.resize(site_pattern_.PatternCount());
   log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
   log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
-
+  //
   auto weights = site_pattern_.GetWeights();
   site_pattern_weights_ = EigenVectorXdOfStdVectorDouble(weights);
-
+  //
   quartet_root_plv_ = plvs_.at(0);
   quartet_root_plv_.setZero();
   quartet_r_s_plv_ = quartet_root_plv_;
@@ -41,7 +43,59 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
   quartet_r_sorted_plv_ = quartet_root_plv_;
   hybrid_marginal_log_likelihoods_.resize(gpcsp_count);
   hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
+  //
+  InitializePLVsWithSitePatterns();
+}
 
+// TODO: 
+void GPEngine::Initialize(SitePattern site_pattern, size_t plv_count,
+                          size_t gpcsp_count, const std::string& mmap_file_path,
+                          double rescaling_threshold, EigenVectorXd sbn_prior,
+                          EigenVectorXd unconditional_node_probabilities,
+                          EigenVectorXd inverted_sbn_prior) {
+  InitializePLVsWithSitePatterns();
+}
+
+// TODO:
+void GPEngine::UpdateAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
+                                    size_t gpcsp_count,
+                                    const std::string& mmap_file_path,
+                                    double rescaling_threshold, EigenVectorXd sbn_prior,
+                                    EigenVectorXd unconditional_node_probabilities,
+                                    EigenVectorXd inverted_sbn_prior) {
+  // Update all field and resize all data that is based on number of nodes, edges, or topologies.
+  site_pattern_ = std::move(site_pattern);
+  plv_count_ = plv_count;
+  // rescaling_threshold_ = rescaling_threshold;
+  // log_rescaling_threshold_ = log(rescaling_threshold); 
+  MmappedNucleotidePLV new_mmapped_master_plv(mmap_file_path, plv_count_ * site_pattern_.PatternCount());
+  // TODO: Fix this!
+  // mmapped_master_plv_ = std::move(new_mmapped_master_plv);
+
+  plvs_ = NucleotidePLVRefVector(mmapped_master_plv_.Subdivide(plv_count_));
+  q_ = std::move(sbn_prior);
+  unconditional_node_probabilities_ = std::move(unconditional_node_probabilities);
+  inverted_sbn_prior_ = std::move(inverted_sbn_prior);
+  //
+  rescaling_counts_.resize(plv_count_);
+  rescaling_counts_.setZero();
+  branch_lengths_.resize(gpcsp_count);
+  branch_lengths_.setConstant(default_branch_length_);
+  log_marginal_likelihood_.resize(site_pattern_.PatternCount());
+  log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
+  log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
+  //
+  auto weights = site_pattern_.GetWeights();
+  site_pattern_weights_ = EigenVectorXdOfStdVectorDouble(weights);
+  //
+  quartet_root_plv_ = plvs_.at(0);
+  quartet_root_plv_.setZero();
+  quartet_r_s_plv_ = quartet_root_plv_;
+  quartet_q_s_plv_ = quartet_root_plv_;
+  quartet_r_sorted_plv_ = quartet_root_plv_;
+  hybrid_marginal_log_likelihoods_.resize(gpcsp_count);
+  hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
+  //
   InitializePLVsWithSitePatterns();
 }
 
@@ -458,3 +512,12 @@ void GPEngine::ProcessQuartetHybridRequest(const QuartetHybridRequest& request) 
         NumericalUtils::LogSum(hybrid_log_likelihoods);
   }
 }
+
+EigenVectorXd GPEngine::CalculateQuartetHybridLikelihoodsWithGraft(
+    const SubsplitDAGGraft& graft, const QuartetHybridRequest& request) {
+  std::vector<double> result;
+  return EigenVectorXdOfStdVectorDouble(result);
+}
+
+void GPEngine::ProcessQuartetHybridRequestWithGraft(
+    const SubsplitDAGGraft& graft, const QuartetHybridRequest& request) {}

@@ -110,7 +110,7 @@ class Bitset {
 
   // ** Clade / MultiClade Methods
   // These methods require bitsets to represent "clades". A clade is an expression of a
-  // subset of a taxon set.  The size of the taxon set is equal to the size of the
+  // subset of a taxon set.  The size of the total taxon set is equal to the size of the
   // clade's bitset, with each bit index representing a inclusion/exclusion of a
   // specific member of that taxon set.
   //
@@ -218,6 +218,8 @@ class Bitset {
   Bitset SubsplitCladeUnion() const;
   // Get whether the given child is the sorted or rotated child to the given parent.
   static bool SubsplitIsWhichChildOf(const Bitset &parent, const Bitset &child);
+  // Check whether subsplits are adjacent/related (whether either is the parent of the other).
+  static bool SubsplitsAreAdjacent(const Bitset &bitset_a, const Bitset &bitset_b);
   // Check whether bitset represents valid Subsplit (contains two equal-sized, disjoint
   // clades).
   bool SubsplitIsValid() const;
@@ -268,6 +270,9 @@ class Bitset {
   bool PCSPIsValid() const;
   // Checks whether the PCSP clade-side edge goes to a fake subsplit.
   bool PCSPIsFake() const;
+  // Sorts PCSP so that parent and child are rotated properly so that second clade is
+  // the focal clade of the parent and third clade is the sorted side of the child.
+  Bitset PCSPSort() const;
   // Do the sister and focal clades union to the whole taxon set?
   // Method excludes rootsplit PCSPs where sister and focal clades
   // also union to the whole taxon set.
@@ -285,7 +290,6 @@ class Bitset {
   SizePair PCSPGetChildSubsplitTaxonCounts() const;
 
  protected:
-  // ** Data
   // Vector of bits.
   std::vector<bool> value_;
 };
@@ -304,6 +308,7 @@ struct equal_to<Bitset> {
 };
 }  // namespace std
 
+// TODO: This should probably be integrated into the class?
 // Returns a new Bitset with size equal to `idx_table`'s size. Each entry
 // of the new bitset is determined as follows:
 // - If the `idx_table` entry is an integer i, then the value is the ith

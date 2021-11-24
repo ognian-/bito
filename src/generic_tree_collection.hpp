@@ -88,6 +88,7 @@ class GenericTreeCollection {
     Erase(0, end_idx);
   }
 
+  //
   std::string Newick() const {
     std::string str;
     for (const auto &tree : trees_) {
@@ -100,7 +101,7 @@ class GenericTreeCollection {
     }
     return str;
   }
-
+  //
   void ToNewickFile(const std::string &out_path) const {
     std::ofstream out_stream(out_path);
     out_stream << Newick();
@@ -109,7 +110,7 @@ class GenericTreeCollection {
       Failwith("ToNewickFile: could not write file to " + out_path);
     }
   }
-
+  //
   Node::TopologyCounter TopologyCounter() const {
     Node::TopologyCounter counter;
     for (const auto &tree : trees_) {
@@ -122,7 +123,7 @@ class GenericTreeCollection {
     }
     return counter;
   }
-
+  //
   std::vector<std::string> TaxonNames() const {
     std::vector<std::string> names(tag_taxon_map_.size());
     for (const auto &iter : tag_taxon_map_) {
@@ -133,7 +134,7 @@ class GenericTreeCollection {
     }
     return names;
   }
-
+  //
   static TagStringMap TagStringMapOf(const std::vector<std::string> &taxon_labels) {
     TagStringMap taxon_map;
     for (size_t index = 0; index < taxon_labels.size(); index++) {

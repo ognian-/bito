@@ -44,8 +44,14 @@ class GPEngine {
                   EigenVectorXd sbn_prior,
                   EigenVectorXd unconditional_node_probabilities,
                   EigenVectorXd inverted_sbn_prior);
-  // Update stats and resize data to reflect SubsplitDAG after modification.
-  void UpdateAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
+  // Resize data members to store SubsplitDAG after modification.
+  void ResizeAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
+                            size_t gpcsp_count, const std::string& mmap_file_path,
+                            double rescaling_threshold, EigenVectorXd sbn_prior,
+                            EigenVectorXd unconditional_node_probabilities,
+                            EigenVectorXd inverted_sbn_prior);
+  // Append new data members to store SubsplitDAG growth after modification.
+  void AppendAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
                             size_t gpcsp_count, const std::string& mmap_file_path,
                             double rescaling_threshold, EigenVectorXd sbn_prior,
                             EigenVectorXd unconditional_node_probabilities,
@@ -53,12 +59,12 @@ class GPEngine {
 
   // Apply all operations in vector in order from beginning to end.
   void ProcessOperations(GPOperationVector operations);
-
+  //
   void SetTransitionMatrixToHaveBranchLength(double branch_length);
   void SetTransitionAndDerivativeMatricesToHaveBranchLength(double branch_length);
   void SetTransitionMatrixToHaveBranchLengthAndTranspose(double branch_length);
   const Eigen::Matrix4d& GetTransitionMatrix() { return transition_matrix_; };
-
+  //
   void SetBranchLengths(EigenVectorXd branch_lengths);
   void SetBranchLengthsToConstant(double branch_length);
   void ResetLogMarginalLikelihood();
@@ -82,7 +88,9 @@ class GPEngine {
   EigenVectorXd GetPerGPCSPComponentsOfFullLogMarginal() const;
   // #288 reconsider this name
   EigenConstMatrixXdRef GetLogLikelihoodMatrix() const;
+  //
   EigenConstVectorXdRef GetHybridMarginals() const;
+  //
   EigenConstVectorXdRef GetSBNParameters() const;
 
   // Calculate a vector of likelihoods, one for each summand of the hybrid marginal.
@@ -104,7 +112,7 @@ class GPEngine {
   // hybrid_marginal_log_likelihoods_.
   void ProcessQuartetHybridRequestWithGraft(const SubsplitDAGGraft& graft,
                                             const QuartetHybridRequest& request);
-
+  //
   void PrintPLV(size_t plv_idx);
 
   // Use branch lengths from loaded sample as a starting point for optimization.
@@ -159,19 +167,25 @@ class GPEngine {
   }
 
  public:
-  //
+  // TODO
   static constexpr double default_rescaling_threshold_ = 1e-40;
   // Initial branch length during first branch length opimization.
   static constexpr double default_branch_length_ = 0.1;
 
  private:
-  // Absolute upper and lower bounds for possible branch lengths in log space (used during optimization).
+  // Absolute lower bound for possible branch lengths during optimization (in log
+  // space).
   static constexpr double min_log_branch_length_ = -13.9;
+  // Absolute upper bound for possible branch lengths during optimization (in log
+  // space).
   static constexpr double max_log_branch_length_ = 1.1;
-
+  // Precision used for checking convergence of branch length optimization.
   int significant_digits_for_optimization_ = 6;
+  //
   double relative_tolerance_for_optimization_ = 1e-2;
+  // Step size used for gradient-based branch length optimization.
   double step_size_for_optimization_ = 5e-4;
+  // Number of iterations allowed for branch length optimization.
   size_t max_iter_for_optimization_ = 1000;
 
   // The length of this vector is equal to the number of site patterns.
@@ -189,7 +203,7 @@ class GPEngine {
   const double rescaling_threshold_;
   // Rescaling threshold in log space.
   const double log_rescaling_threshold_;
-  // 
+  //
   MmappedNucleotidePLV mmapped_master_plv_;
   // Partial Likelihood Vectors
   // plvs_ store the following (see GPDAG::GetPLVIndexStatic):
@@ -205,10 +219,11 @@ class GPEngine {
   // branch_lengths_, q_, etc. are indexed in the same way as sbn_parameters_ in
   // gp_instance.
   EigenVectorXd branch_lengths_;
-  // TODO: Add descriptions.
   //
   EigenVectorXd q_;
+  //
   EigenVectorXd unconditional_node_probabilities_;
+  //
   EigenVectorXd inverted_sbn_prior_;
 
   // The number of rows is equal to the number of GPCSPs.

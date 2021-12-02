@@ -126,7 +126,7 @@ class SubsplitDAG {
   // Each node in a topology is constructed with SubsplitDAGNode ID as Node ID.
   Node::NodePtrVec GenerateAllTopologies() const;
 
-  // ** Getters methods:
+  // ** Getter methods:
 
   // Get Taxon's bitset clade positional id.
   size_t GetTaxonId(const std::string &name) const;
@@ -414,7 +414,7 @@ class SubsplitDAG {
       const bool forward_translate = true);
 
  protected:
-  // ** Constructors methods:
+  // ** Constructor methods:
 
   // Build a Subsplit DAG on given number of taxa, expressing all tree topologies from
   // tree_collection, with trees on the given taxa names/labels.

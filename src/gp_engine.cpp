@@ -20,7 +20,6 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
       q_(std::move(sbn_prior)),
       unconditional_node_probabilities_(std::move(unconditional_node_probabilities)),
       inverted_sbn_prior_(std::move(inverted_sbn_prior)) {
-
   Assert(plvs_.back().rows() == MmappedNucleotidePLV::base_count_ &&
              plvs_.back().cols() == site_pattern_.PatternCount(),
          "Didn't get the right shape of PLVs out of Subdivide.");
@@ -47,7 +46,7 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
   InitializePLVsWithSitePatterns();
 }
 
-// TODO: 
+// TODO:
 void GPEngine::Initialize(SitePattern site_pattern, size_t plv_count,
                           size_t gpcsp_count, const std::string& mmap_file_path,
                           double rescaling_threshold, EigenVectorXd sbn_prior,
@@ -57,21 +56,22 @@ void GPEngine::Initialize(SitePattern site_pattern, size_t plv_count,
 }
 
 // TODO:
-void GPEngine::UpdateAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
+void GPEngine::ResizeAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
                                     size_t gpcsp_count,
                                     const std::string& mmap_file_path,
                                     double rescaling_threshold, EigenVectorXd sbn_prior,
                                     EigenVectorXd unconditional_node_probabilities,
                                     EigenVectorXd inverted_sbn_prior) {
-  // Update all field and resize all data that is based on number of nodes, edges, or topologies.
+  // Update all field and resize all data that is based on number of nodes, edges, or
+  // topologies.
   site_pattern_ = std::move(site_pattern);
   plv_count_ = plv_count;
   // rescaling_threshold_ = rescaling_threshold;
-  // log_rescaling_threshold_ = log(rescaling_threshold); 
-  MmappedNucleotidePLV new_mmapped_master_plv(mmap_file_path, plv_count_ * site_pattern_.PatternCount());
+  // log_rescaling_threshold_ = log(rescaling_threshold);
+  MmappedNucleotidePLV new_mmapped_master_plv(
+      mmap_file_path, plv_count_ * site_pattern_.PatternCount());
   // TODO: Fix this!
   // mmapped_master_plv_ = std::move(new_mmapped_master_plv);
-
   plvs_ = NucleotidePLVRefVector(mmapped_master_plv_.Subdivide(plv_count_));
   q_ = std::move(sbn_prior);
   unconditional_node_probabilities_ = std::move(unconditional_node_probabilities);
@@ -98,6 +98,14 @@ void GPEngine::UpdateAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
   //
   InitializePLVsWithSitePatterns();
 }
+
+// TODO:
+void GPEngine::AppendAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
+                                    size_t gpcsp_count,
+                                    const std::string& mmap_file_path,
+                                    double rescaling_threshold, EigenVectorXd sbn_prior,
+                                    EigenVectorXd unconditional_node_probabilities,
+                                    EigenVectorXd inverted_sbn_prior) {}
 
 void GPEngine::operator()(const GPOperations::ZeroPLV& op) {
   plvs_.at(op.dest_).setZero();

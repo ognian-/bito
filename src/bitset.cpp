@@ -429,6 +429,16 @@ bool Bitset::SubsplitIsWhichChildOf(const Bitset& parent, const Bitset& child) {
       "Bitset::SubsplitIsWhichChildOf(): given parent is not a parent of given child.");
 }
 
+bool Bitset::SubsplitIsParentChildPair(const Bitset& parent, const Bitset& child) {
+  return child.SubsplitIsSortedChildOf(parent) ||
+         child.SubsplitIsRotatedChildOf(parent);
+}
+
+bool Bitset::SubsplitIsAdjacent(const Bitset& subsplit_a, const Bitset& subsplit_b) {
+  return SubsplitIsParentChildPair(subsplit_a, subsplit_b) ||
+         SubsplitIsParentChildPair(subsplit_b, subsplit_a);
+}
+
 bool Bitset::SubsplitIsValid() const {
   return SubsplitGetClade(0).IsDisjoint(SubsplitGetClade(1));
 }

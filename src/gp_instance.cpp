@@ -84,7 +84,8 @@ void GPInstance::MakeEngine(double rescaling_threshold) {
   // Initialize the DAG (uses TidySubsplitDAG constructor).
   dag_ = GPDAG(tree_collection_);
   // Initialize the GPEngine.
-  // Uniform support assigns each possible topology expressed by the DAG to have equal likelihood.
+  // Uniform support assigns each possible topology expressed by the DAG to have equal
+  // likelihood.
   auto sbn_prior = dag_.BuildUniformOnTopologicalSupportPrior();
   // TODO:
   auto unconditional_node_probabilities =

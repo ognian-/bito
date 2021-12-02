@@ -122,7 +122,7 @@ class Bitset {
   // their taxon subset. (e.g. If two clades are "010" and "101", then their taxon
   // subsets are {b} and {a,c}. "b" > "a", therefore "010" > "101".) Note: Sorting by
   // taxon representation gives the precise opposite ordering to sorting by binary
-  // representation (except in the case of zero/empty set).
+  // representation (except in the case of zero/empty set!).
   //
   // Issue #375 - We need to refactor.
   static int CladeCompare(const Bitset &bitset_a, const Bitset &bitset_b);
@@ -141,6 +141,14 @@ class Bitset {
   // sides of the subsplit. Clades are stored in a sorted order wrt to their
   // lexicographic taxon ordering: the smaller "left" or "sorted" clade stored in the
   // 0-position, and the larger "right" or "rotated" clade in the 1-position.
+
+  static inline size_t SubsplitCladeCount = 2;
+  enum class SubsplitClade : bool {
+    Left = 0,    /* false */
+    Right = 1,   /* true */
+    Sorted = 0,  /* false */
+    Rotated = 1, /* true */
+  };
 
   // Constructors:
   // Each argument represents one of the clade of the subsplit.
@@ -216,10 +224,15 @@ class Bitset {
   bool SubsplitIsSortedChildOf(const Bitset &other) const;
   // Get the union of the two clades.
   Bitset SubsplitCladeUnion() const;
-  // Get whether the given child is the sorted or rotated child to the given parent.
+  // Get whether the given child is the sorted (false, 0-position) or rotated (true,
+  // 1-position) child to the given parent.
   static bool SubsplitIsWhichChildOf(const Bitset &parent, const Bitset &child);
-  // Check whether subsplits are adjacent/related (whether either is the parent of the other).
-  static bool SubsplitsAreAdjacent(const Bitset &bitset_a, const Bitset &bitset_b);
+  // TODO: Implement this!
+  // Check whether subsplits form a child/parent pair.
+  static bool SubsplitIsParentChildPair(const Bitset &parent, const Bitset &child);
+  // Check whether subsplits are adjacent/related (whether either is the parent of the
+  // other).
+  static bool SubsplitIsAdjacent(const Bitset &subsplit_a, const Bitset &subsplit_b);
   // Check whether bitset represents valid Subsplit (contains two equal-sized, disjoint
   // clades).
   bool SubsplitIsValid() const;
@@ -234,6 +247,7 @@ class Bitset {
   // The clades are well defined relative to the cut parent: the other part of
   // the subsplit, "rotated clade" is the cut parent set, minus the "sorted clade".
   //
+  // TODO: fix this example.
   // For example, `100|011|001` is composed of the clades `100`, `011` and `001`.
   // If the taxa are x0, x1, and x2 then this means the parent subsplit is (A,
   // BC) with bitset `100|011`, and the child subsplit is (B, C) with bitset
@@ -243,6 +257,14 @@ class Bitset {
   // is the sister clade (all 0s), the focal clade (all 1s), and "clade 0". For
   // example, `000111010` is the PCSP from the DAG root node to the rootsplit (AC, B).
   // See the unit tests at the bottom for more examples.
+
+  static inline size_t PCSPCladeCount = 3;
+  enum class PCSPClade : size_t {
+    Sister = 0,
+    Focal = 1,
+    SortedChild = 2,
+    LeftChild = 2,
+  };
 
   // Constructors:
   // Build a PCSP bitset from a compatible parent-child pair of
@@ -402,9 +424,10 @@ TEST_CASE("Bitset") {
 
 TEST_CASE("Bitset: Clades, Subsplits, PCSPs") {
   auto p = Bitset("000111");
-
+  // Subsplit: 000|111
   CHECK_EQ(p.SubsplitGetClade(0), Bitset("000"));
   CHECK_EQ(p.SubsplitGetClade(1), Bitset("111"));
+  // PCSP: 00|01|11
   CHECK_EQ(p.PCSPGetClade(0), Bitset("00"));
   CHECK_EQ(p.PCSPGetClade(1), Bitset("01"));
   CHECK_EQ(p.PCSPGetClade(2), Bitset("11"));
@@ -418,7 +441,10 @@ TEST_CASE("Bitset: Clades, Subsplits, PCSPs") {
   CHECK_EQ(Bitset("010101").SubsplitToVectorOfSetBitsAsString(), "1|0,2");
 
   CHECK_EQ(Bitset("101010").SubsplitIsRotatedChildOf(Bitset("111000")), true);
+  // CHECK_EQ(Bitset::SubsplitIsWhichChildOf(Bitset("111000"), Bitset("101010")),true);
   CHECK_EQ(Bitset("00100001").SubsplitIsSortedChildOf(Bitset("11000011")), true);
+  // CHECK_EQ(Bitset::SubsplitIsWhichChildOf(Bitset("000111"), Bitset("101010")),
+  // false);
   CHECK_EQ(Bitset("010001").SubsplitIsRotatedChildOf(Bitset("110001")), false);
   CHECK_EQ(Bitset("010001").SubsplitIsSortedChildOf(Bitset("01000011")), false);
   // Should throw because Bitsets can't be divided into equal-sized clades.

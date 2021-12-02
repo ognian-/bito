@@ -18,20 +18,60 @@ class SubsplitDAGGraft {
   // Initialize empty graft.
   SubsplitDAGGraft(SubsplitDAG &dag);
   // TODO:
+  // Initialize graft with an initial graft.
   SubsplitDAGGraft(SubsplitDAG &dag, NNIOperation &nni);
-  // TODO:
   SubsplitDAGGraft(SubsplitDAG &dag, Bitset &parent_subsplit, Bitset &child_subsplit);
 
-  // ** DAG Traversals methods:
+  // ** Comparators
+  // Uses same method of comparison as SubsplitDAG (node and edge sets).
+  static int Compare(SubsplitDAGGraft &dag_a, SubsplitDAGGraft &dag_b);
+  // Treats SubsplitDAGGraft as completed SubsplitDAG to compare against normal
+  // SubsplitDAG.
+  static int Compare(SubsplitDAGGraft &dag_a, SubsplitDAG &dag_b);
 
-  // ** Modify graft methods:
+  // ** DAG Traversals
+  // These traversals cover the DAG as though graft were formally added to host into a
+  // single SubsplitDAG.
 
+  void IterateOverRealNodes(const SubsplitDAG::NodeLambda &f) const;
+
+  // ** Modify DAG
+
+  // Add node to the graft.
+  void CreateAndInsertNode(const Bitset &node_subsplit);
+  // Add edge to the graft.
+  void CreateAndInsertEdge(const Bitset &parent_subsplit, const Bitset &child_subsplit);
+  // TODO:
   // Add node pair to graft.
-  void AddNodePair(Bitset &parent_subsplit, Bitset &child_subsplit);
+  void AddNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
+  // TODO:
   // Remove node pair from graft.
-  void RemoveNodePair(Bitset &parent_subsplit, Bitset &child_subsplit);
+  void RemoveNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
+  // TODO:
   // Clear all nodes and edges from graft for reuse.
   void Clear();
+
+  // ** Getters
+
+  // Get node based on node id.
+  SubsplitDAGNode *GetDAGNode(const size_t node_id) const;
+  // Get the node id based on the subsplit bitset.
+  size_t GetDAGNodeId(const Bitset &subsplit) const;
+  // Gets the node id of the DAG root.
+  size_t DAGRootNodeId() const;
+  // Return the node ids corresponding to the rootsplits.
+  const SizeVector &RootsplitIds() const;
+  // Get the GPCSP edge index by its parent-child pair subsplits from the DAG nodes.
+  size_t GetGPCSPEdgeIdx(const Bitset &parent_subsplit,
+                         const Bitset &child_subsplit) const;
+  // Get the GPCSP edge index by its parent-child pair id from the DAG nodes.
+  size_t GetGPCSPEdgeIdx(const size_t parent_id, const size_t child_id) const;
+  // Get a sorted vector of all node subsplit's bitset representation. Optionally only
+  // graft nodes, or graft and host nodes.
+  BitsetVector GetSortedVectorOfNodeBitsets(bool include_host = true);
+  // Get a sorted vector of all edge PCSP's bitset representation. Optionally only graft
+  // edges, or graft and host edges.
+  BitsetVector GetSortedVectorOfEdgeBitsets(bool include_host = true);
 
   // ** Counts
 

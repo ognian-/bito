@@ -39,6 +39,7 @@
 #include "subsplit_dag_action.hpp"
 #include "subsplit_dag_nni.hpp"
 #include "subsplit_dag_node.hpp"
+#include "topology_sampler.hpp"
 
 class SubsplitDAG {
  public:
@@ -72,6 +73,32 @@ class SubsplitDAG {
   size_t RootsplitCount() const;
   size_t GPCSPCount() const;
   size_t GPCSPCountWithFakeSubsplits() const;
+
+  class TopologySamplerInput : public TopologySampler::Input {
+  public:
+    TopologySamplerInput(const SubsplitDAG& dag, EigenConstVectorXdRef sbn_parameters) :
+      dag_{dag}, sbn_parameters_{sbn_parameters} {}
+
+    bool IsRooted() const override { return true; }
+    size_t RootsplitCount() const override { return dag_.RootsplitCount(); }
+    EigenConstVectorXdRef SBNParameters() const override { return sbn_parameters_; }
+    
+    const Bitset &RootsplitsAt(size_t rootsplit_idx) const override {
+      return dag_.GetDAGNode(dag_.RootsplitIds().at(rootsplit_idx))->GetBitset();;
+    }
+    
+    const SizePair &ParentToRangeAt(const Bitset &parent) const override {
+      return dag_.parent_to_range_.at(parent);
+    }
+
+    const Bitset &IndexToChildAt(size_t child_idx) const override {
+      return dag_.GetDAGNode(child_idx)->GetBitset();
+    }
+
+  private:
+    const SubsplitDAG& dag_;
+    EigenConstVectorXdRef sbn_parameters_;
+  };
 
   void Print() const;
   void PrintGPCSPIndexer() const;

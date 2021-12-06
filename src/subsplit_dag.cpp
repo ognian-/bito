@@ -187,6 +187,14 @@ const SizeVector &SubsplitDAG::RootsplitIds() const {
   return GetDAGNode(DAGRootNodeId())->GetLeafwardRotated();
 }
 
+const BitsetSizePairMap& SubsplitDAG::ParentToRange() const {
+  return parent_to_range_;
+}
+
+const std::map<SizePair, size_t>& SubsplitDAG::DAGEdges() const {
+  return dag_edges_;
+}
+
 size_t SubsplitDAG::GetGPCSPIndex(const Bitset &parent_subsplit,
                                   const Bitset &child_subsplit) const {
   return GPCSPIndexOfIds(GetDAGNodeId(parent_subsplit), GetDAGNodeId(child_subsplit));

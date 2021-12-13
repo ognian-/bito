@@ -306,8 +306,8 @@ void GPDAG::AddRhatOperations(const SubsplitDAGNode *node,
 
 void GPDAG::OptimizeSBNParametersForASubsplit(const Bitset &subsplit,
                                               GPOperationVector &operations) const {
-  if (parent_to_range_.count(subsplit) > 0) {
-    const auto param_range = parent_to_range_.at(subsplit);
+  if (parent_to_child_range_.count(subsplit) > 0) {
+    const auto param_range = parent_to_child_range_.at(subsplit);
     if (param_range.second - param_range.first > 1) {
       operations.push_back(
           UpdateSBNProbabilities{param_range.first, param_range.second});
@@ -390,7 +390,7 @@ QuartetHybridRequest GPDAG::QuartetHybridRequestOf(size_t parent_id, bool rotate
         const auto sister_id = sister_node->Id();
         sister_tips.emplace_back(
             sister_id, GetPLVIndex(PLVType::P, sister_id),
-            GetEdgeIndex(parent_node->GetBitset(), sister_node->GetBitset()));
+            GetEdgeIdx(parent_node->GetBitset(), sister_node->GetBitset()));
       });
 
   QuartetTipVector rotated_tips;

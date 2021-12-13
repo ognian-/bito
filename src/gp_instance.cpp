@@ -206,7 +206,7 @@ void GPInstance::CalculateHybridMarginals() {
 size_t GPInstance::GetGPCSPIndexForLeafNode(const Bitset &parent_subsplit,
                                             const Node *leaf_node) const {
   Assert(leaf_node->IsLeaf(), "Only leaf node is permitted.");
-  return dag_.GetEdgeIndex(parent_subsplit, Bitset::LeafSubsplit(leaf_node->Leaves()));
+  return dag_.GetEdgeIdx(parent_subsplit, Bitset::LeafSubsplit(leaf_node->Leaves()));
 }
 
 RootedTreeCollection GPInstance::TreesWithGPBranchLengthsOfTopologies(
@@ -224,7 +224,7 @@ RootedTreeCollection GPInstance::TreesWithGPBranchLengthsOfTopologies(
             const Node *child1) {
           Bitset parent_subsplit = Bitset::Subsplit(sister->Leaves(), focal->Leaves());
           Bitset child_subsplit = Bitset::Subsplit(child0->Leaves(), child1->Leaves());
-          size_t gpcsp_idx = dag_.GetEdgeIndex(parent_subsplit, child_subsplit);
+          size_t gpcsp_idx = dag_.GetEdgeIdx(parent_subsplit, child_subsplit);
           branch_lengths[focal->Id()] = gpcsp_indexed_branch_lengths[gpcsp_idx];
 
           if (sister->IsLeaf()) {
@@ -253,8 +253,8 @@ RootedTreeCollection GPInstance::GenerateCompleteRootedTreeCollection() {
 
 StringVector GPInstance::PrettyIndexer() const {
   StringVector pretty_representation(dag_.BuildEdgeIndexer().size());
-  for (const auto &[pcsp, idx] : dag_.BuildEdgeIndexer()) {
-    pretty_representation[idx] = pcsp.PCSPToString();
+  for (const auto &[edge, idx] : dag_.BuildEdgeIndexer()) {
+    pretty_representation[idx] = edge.EdgeToString();
   }
   return pretty_representation;
 }

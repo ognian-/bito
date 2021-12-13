@@ -595,7 +595,7 @@ TEST_CASE("GPInstance: test GPCSP indexes") {
   auto& dag = inst.GetDAG();
   dag.ReversePostorderIndexTraversal(
       [&dag](size_t parent_id, bool rotated, size_t child_id, size_t gpcsp_idx) {
-        CHECK_EQ(dag.GPCSPIndexOfIds(parent_id, child_id), gpcsp_idx);
+        CHECK_EQ(dag.EdgeIndexOfIds(parent_id, child_id), gpcsp_idx);
       });
 }
 
@@ -721,11 +721,11 @@ TEST_CASE("GPInstance: AddNodePair tests") {
   // Check that `subsplit_to_id_` node ids were updated.
   CHECK_EQ(dag.GetDAGNodeId(node_14->GetBitset()), 14);
   // Check that `dag_edges_` node ids were updated.
-  CHECK_EQ(dag.GPCSPIndexOfIds(15, 14), 9);
+  CHECK_EQ(dag.EdgeIndexOfIds(15, 14), 9);
   // Check that `dag_edges_` edge idxs were updated.
-  CHECK_EQ(dag.GPCSPIndexOfIds(14, 13), 8);
-  CHECK_EQ(dag.GPCSPIndexOfIds(16, 13), 12);
-  CHECK_EQ(dag.GPCSPIndexOfIds(11, 4), 25);
+  CHECK_EQ(dag.EdgeIndexOfIds(14, 13), 8);
+  CHECK_EQ(dag.EdgeIndexOfIds(16, 13), 12);
+  CHECK_EQ(dag.EdgeIndexOfIds(11, 4), 25);
   // Check that `parent_to_range_` was updated.
   CHECK_EQ(dag.GetEdgeRange(node_14->GetBitset(), false).second, 9);
   CHECK_EQ(dag.GetEdgeRange(dag.GetDAGNode(16)->GetBitset(), false).first, 11);

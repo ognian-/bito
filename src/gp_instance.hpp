@@ -30,7 +30,7 @@ class GPInstance {
   bool HasEngine() const;
   GPDAG &GetDAG();
   void PrintDAG();
-  void PrintGPCSPIndexer();
+  void PrintEdgeIndexer();
   void ProcessOperations(const GPOperationVector &operations);
   void HotStartBranchLengths();
   void EstimateSBNParameters();

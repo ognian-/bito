@@ -26,10 +26,10 @@ BitsetDoubleMap RootedSBNInstance::UnconditionalSubsplitProbabilities() const {
   const SubsplitDAG dag(tree_collection_);
   EigenVectorXd sbn_parameters = NormalizedSBNParameters();
   // Expand sbn_parameters to include fake subsplits.
-  Assert(sbn_parameters.size() == dag.GPCSPCount(), "GPCSP count mismatch.");
-  sbn_parameters.conservativeResize(dag.GPCSPCountWithFakeSubsplits());
+  Assert(sbn_parameters.size() == dag.EdgeCount(), "GPCSP count mismatch.");
+  sbn_parameters.conservativeResize(dag.EdgeCountWithLeafSubsplits());
   sbn_parameters
-      .segment(dag.GPCSPCount(), dag.GPCSPCountWithFakeSubsplits() - dag.GPCSPCount())
+      .segment(dag.EdgeCount(), dag.EdgeCountWithLeafSubsplits() - dag.EdgeCount())
       .setOnes();
   return dag.UnconditionalSubsplitProbabilities(sbn_parameters);
 }

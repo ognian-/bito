@@ -21,7 +21,7 @@ class NNIEvaluationEngine {
 
   // ** Getter/Setters:
 
-  // 
+  //
   GPDAG *GetReferenceGPDAG() { return dag_; };
   //
   SetOfNNIs &GetAdjacentNNIs() { return adjacent_nnis_; };

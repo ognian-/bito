@@ -27,7 +27,7 @@ void GPInstance::PrintStatus() {
   std::cout << alignment_.Data().size() << " sequences loaded.\n";
   std::cout << dag_.NodeCount() << " DAG nodes representing " << dag_.TopologyCount()
             << " trees.\n";
-  std::cout << dag_.GPCSPCountWithFakeSubsplits() << " continuous parameters.\n";
+  std::cout << dag_.EdgeCountWithLeafSubsplits() << " continuous parameters.\n";
   if (HasEngine()) {
     std::cout << "Engine available using " << GetEngine()->PLVByteCount() / 1e9
               << "G virtual memory.\n";
@@ -96,7 +96,7 @@ void GPInstance::MakeEngine(double rescaling_threshold) {
   //
   engine_ = std::make_unique<GPEngine>(
       std::move(site_pattern), plv_count_per_node_ * (dag_.NodeCountWithoutDAGRoot()),
-      dag_.GPCSPCountWithFakeSubsplits(), mmap_file_path_, rescaling_threshold,
+      dag_.EdgeCountWithLeafSubsplits(), mmap_file_path_, rescaling_threshold,
       std::move(sbn_prior), std::move(unconditional_node_probabilities),
       std::move(inverted_sbn_prior));
 }
@@ -117,9 +117,9 @@ GPDAG &GPInstance::GetDAG() { return dag_; }
 
 void GPInstance::PrintDAG() { dag_.Print(); }
 
-void GPInstance::PrintGPCSPIndexer() {
+void GPInstance::PrintEdgeIndexer() {
   std::cout << "Vector of taxon names: " << tree_collection_.TaxonNames() << std::endl;
-  dag_.PrintGPCSPIndexer();
+  dag_.PrintEdgeIndexer();
 }
 
 void GPInstance::ProcessOperations(const GPOperationVector &operations) {
@@ -130,7 +130,7 @@ void GPInstance::ClearTreeCollectionAssociatedState() { dag_ = GPDAG(); }
 
 void GPInstance::HotStartBranchLengths() {
   if (HasEngine()) {
-    GetEngine()->HotStartBranchLengths(tree_collection_, dag_.BuildGPCSPIndexer());
+    GetEngine()->HotStartBranchLengths(tree_collection_, dag_.BuildEdgeIndexer());
   } else {
     Failwith(
         "Please load and process some trees before calling HotStartBranchLengths.");
@@ -210,44 +210,42 @@ void GPInstance::CalculateHybridMarginals() {
   });
 }
 
-size_t GPInstance::GetGPCSPIndexForLeafNode(const Bitset &parent_subsplit,
-                                            const Node *leaf_node) const {
+size_t GPInstance::GetEdgeIndexForLeafNode(const Bitset &parent_subsplit,
+                                           const Node *leaf_node) const {
   Assert(leaf_node->IsLeaf(), "Only leaf node is permitted.");
-  return dag_.GetGPCSPEdgeIdx(parent_subsplit,
-                              Bitset::FakeSubsplit(leaf_node->Leaves()));
+  return dag_.GetEdgeIdx(parent_subsplit, Bitset::LeafSubsplit(leaf_node->Leaves()));
 }
 
 RootedTreeCollection GPInstance::TreesWithGPBranchLengthsOfTopologies(
     Node::NodePtrVec &&topologies) const {
-  const EigenVectorXd gpcsp_indexed_branch_lengths = engine_->GetBranchLengths();
+  const EigenVectorXd edge_indexed_branch_lengths = engine_->GetBranchLengths();
   RootedTree::RootedTreeVector tree_vector;
 
   for (auto &root_node : topologies) {
     size_t node_count = 2 * root_node->LeafCount() - 1;
     std::vector<double> branch_lengths(node_count);
 
-    root_node->RootedPCSPPreorder(
-        [this, &branch_lengths, &gpcsp_indexed_branch_lengths](
-            const Node *sister, const Node *focal, const Node *child0,
-            const Node *child1) {
-          Bitset parent_subsplit = Bitset::Subsplit(sister->Leaves(), focal->Leaves());
-          Bitset child_subsplit = Bitset::Subsplit(child0->Leaves(), child1->Leaves());
-          size_t gpcsp_idx = dag_.GetGPCSPEdgeIdx(parent_subsplit, child_subsplit);
-          branch_lengths[focal->Id()] = gpcsp_indexed_branch_lengths[gpcsp_idx];
+    root_node->RootedPCSPPreorder([this, &branch_lengths, &edge_indexed_branch_lengths](
+                                      const Node *sister, const Node *focal,
+                                      const Node *child0, const Node *child1) {
+      Bitset parent_subsplit = Bitset::Subsplit(sister->Leaves(), focal->Leaves());
+      Bitset child_subsplit = Bitset::Subsplit(child0->Leaves(), child1->Leaves());
+      size_t edge_idx = dag_.GetEdgeIdx(parent_subsplit, child_subsplit);
+      branch_lengths[focal->Id()] = edge_indexed_branch_lengths[edge_idx];
 
-          if (sister->IsLeaf()) {
-            gpcsp_idx = GetGPCSPIndexForLeafNode(parent_subsplit, sister);
-            branch_lengths[sister->Id()] = gpcsp_indexed_branch_lengths[gpcsp_idx];
-          }
-          if (child0->IsLeaf()) {
-            gpcsp_idx = GetGPCSPIndexForLeafNode(child_subsplit, child0);
-            branch_lengths[child0->Id()] = gpcsp_indexed_branch_lengths[gpcsp_idx];
-          }
-          if (child1->IsLeaf()) {
-            gpcsp_idx = GetGPCSPIndexForLeafNode(child_subsplit, child1);
-            branch_lengths[child1->Id()] = gpcsp_indexed_branch_lengths[gpcsp_idx];
-          }
-        });
+      if (sister->IsLeaf()) {
+        edge_idx = GetEdgeIndexForLeafNode(parent_subsplit, sister);
+        branch_lengths[sister->Id()] = edge_indexed_branch_lengths[edge_idx];
+      }
+      if (child0->IsLeaf()) {
+        edge_idx = GetEdgeIndexForLeafNode(child_subsplit, child0);
+        branch_lengths[child0->Id()] = edge_indexed_branch_lengths[edge_idx];
+      }
+      if (child1->IsLeaf()) {
+        edge_idx = GetEdgeIndexForLeafNode(child_subsplit, child1);
+        branch_lengths[child1->Id()] = edge_indexed_branch_lengths[edge_idx];
+      }
+    });
 
     tree_vector.emplace_back(root_node, std::move(branch_lengths));
   }
@@ -260,9 +258,9 @@ RootedTreeCollection GPInstance::GenerateCompleteRootedTreeCollection() {
 }
 
 StringVector GPInstance::PrettyIndexer() const {
-  StringVector pretty_representation(dag_.BuildGPCSPIndexer().size());
-  for (const auto &[pcsp, idx] : dag_.BuildGPCSPIndexer()) {
-    pretty_representation[idx] = pcsp.PCSPToString();
+  StringVector pretty_representation(dag_.BuildEdgeIndexer().size());
+  for (const auto &[pcsp, idx] : dag_.BuildEdgeIndexer()) {
+    pretty_representation[idx] = pcsp.EdgeToString();
   }
   return pretty_representation;
 }
@@ -321,7 +319,7 @@ RootedTreeCollection GPInstance::CurrentlyLoadedTreesWithGPBranchLengths() {
 
 RootedTreeCollection GPInstance::CurrentlyLoadedTreesWithAPCSPStringAndGPBranchLengths(
     const std::string &pcsp_string) {
-  const BitsetSizeMap &indexer = dag_.BuildGPCSPIndexer();
+  const BitsetSizeMap &indexer = dag_.BuildEdgeIndexer();
   Bitset pcsp(pcsp_string);
   auto search = indexer.find(pcsp);
   if (search == indexer.end()) {

@@ -50,7 +50,7 @@ class GPInstance {
 
   GPDAG &GetDAG();
   void PrintDAG();
-  void PrintGPCSPIndexer();
+  void PrintEdgeIndexer();
   void ProcessOperations(const GPOperationVector &operations);
   void HotStartBranchLengths();
   void EstimateSBNParameters();
@@ -120,8 +120,8 @@ class GPInstance {
   // Verify that sequences and trees are nonempty.
   void CheckSequencesAndTreesLoaded() const;
 
-  size_t GetGPCSPIndexForLeafNode(const Bitset &parent_subsplit,
-                                  const Node *leaf_node) const;
+  size_t GetEdgeIndexForLeafNode(const Bitset &parent_subsplit,
+                                 const Node *leaf_node) const;
   RootedTreeCollection TreesWithGPBranchLengthsOfTopologies(
       Node::NodePtrVec &&topologies) const;
   StringDoubleVector PrettyIndexedVector(EigenConstVectorXdRef v);

@@ -203,8 +203,8 @@ void GPInstance::CalculateHybridMarginals() {
   });
 }
 
-size_t GPInstance::GetGPCSPIndexForLeafNode(const Bitset &parent_subsplit,
-                                            const Node *leaf_node) const {
+size_t GPInstance::GetEdgeIndexForLeafNode(const Bitset &parent_subsplit,
+                                           const Node *leaf_node) const {
   Assert(leaf_node->IsLeaf(), "Only leaf node is permitted.");
   return dag_.GetEdgeIdx(parent_subsplit, Bitset::LeafSubsplit(leaf_node->Leaves()));
 }

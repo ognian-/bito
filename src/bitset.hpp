@@ -107,6 +107,12 @@ class Bitset {
   std::optional<uint32_t> SingletonOption() const;
   // Output as string of comma-separated indices.
   std::string ToVectorOfSetBitsAsString() const;
+  // Returns a new Bitset with size equal to `idx_table`'s size. Each entry
+  // of the new bitset is determined as follows:
+  // - If the `idx_table` entry is an integer i, then the value is the ith
+  //   entry of `bitset`.
+  // - If the entry is nullopt, then the value is False (i.e. zero).
+  static Bitset Remap(const Bitset &bitset, const SizeOptionVector &idx_table);
 
   // ** Clade / MultiClade Methods
   // These methods require bitsets to represent "clades". A clade is an expression of a
@@ -194,7 +200,7 @@ class Bitset {
   // Flip the order of the two clades of a subsplit.
   Bitset SubsplitRotate() const;
   // Sorts clades of subsplit so that they are ordered by their taxon representation.
-  Bitset SubsplitSort() const;
+  Bitset SubsplitSortClades() const;
   // Gets the size of each of each clade. This is the same as the size of the whole
   // taxon set.
   size_t SubsplitGetCladeSize() const;
@@ -227,7 +233,6 @@ class Bitset {
   // Get whether the given child is the sorted (false, 0-position) or rotated (true,
   // 1-position) child to the given parent.
   static bool SubsplitIsWhichChildOf(const Bitset &parent, const Bitset &child);
-  // TODO: Implement this!
   // Check whether subsplits form a child/parent pair.
   static bool SubsplitIsParentChildPair(const Bitset &parent, const Bitset &child);
   // Check whether subsplits are adjacent/related (whether either is the parent of the
@@ -246,7 +251,6 @@ class Bitset {
   // The clades are well defined relative to the cut parent: the other part of
   // the subsplit, "rotated clade" is the cut parent set, minus the "sorted clade".
   //
-  // TODO: fix this example.
   // For example, `100|011|001` is composed of the clades `100`, `011` and `001`.
   // If the taxa are x0, x1, and x2 then this means the parent subsplit is (A,
   // BC) with bitset `100|011`, and the child subsplit is (B, C) with bitset
@@ -280,10 +284,10 @@ class Bitset {
   // Make a "leaf" Edge of a given parent subsplit; assert that the left-hand clade of
   // the parent subsplit is non-empty and that the right-hand clade is a singleton.
   // This leaf subsplit has parent subsplit on the left and all zeroes on the right.
-  static Bitset LeafEdge(const Bitset &parent_subsplit);
+  static Bitset EdgeToLeaf(const Bitset &parent_subsplit);
   // Given a rootsplit, get the Edge connecting the DAG root node to that rootsplit
   // (e.g. '1100|0011' would return '0000|1111|0011').
-  static Bitset EdgeOfRootsplit(const Bitset &rootsplit);
+  static Bitset EdgeToRootsplit(const Bitset &rootsplit);
   // Output Edge as string of "1" and "0" characters, with each clade separated by a
   // "|".
   std::string EdgeToString() const;
@@ -293,7 +297,7 @@ class Bitset {
   bool EdgeIsLeaf() const;
   // Sorts Edge so that parent and child are rotated properly so that second clade is
   // the focal clade of the parent and third clade is the sorted side of the child.
-  Bitset EdgeSort() const;
+  Bitset EdgeSortClades() const;
   // Do the sister and focal clades union to the whole taxon set?
   // Method excludes rootsplit Edges where sister and focal clades
   // also union to the whole taxon set.
@@ -328,14 +332,6 @@ struct equal_to<Bitset> {
   bool operator()(const Bitset &lhs, const Bitset &rhs) const { return lhs == rhs; }
 };
 }  // namespace std
-
-// TODO: This should probably be integrated into the class?
-// Returns a new Bitset with size equal to `idx_table`'s size. Each entry
-// of the new bitset is determined as follows:
-// - If the `idx_table` entry is an integer i, then the value is the ith
-//   entry of `bitset`.
-// - If the entry is nullopt, then the value is False (i.e. zero).
-Bitset Remap(const Bitset &bitset, const SizeOptionVector &idx_table);
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 
@@ -490,7 +486,7 @@ TEST_CASE("Bitset: Clades, Subsplits, Edges") {
   CHECK_THROWS(Bitset::Edge(Bitset("110001"), Bitset("110100")));
 
   CHECK_EQ(Bitset::RootsplitOfHalf(Bitset("0011")), Bitset("11000011"));
-  CHECK_EQ(Bitset::EdgeOfRootsplit(Bitset("11000011")), Bitset("000011110011"));
+  CHECK_EQ(Bitset::EdgeToRootsplit(Bitset("11000011")), Bitset("000011110011"));
 
   CHECK_EQ(Bitset("010000").SubsplitIsLeaf(), true);
   CHECK_EQ(Bitset("010010").SubsplitIsLeaf(), false);
@@ -498,18 +494,18 @@ TEST_CASE("Bitset: Clades, Subsplits, Edges") {
   CHECK_EQ(Bitset::LeafSubsplit(Bitset("010")), Bitset("010000"));
   CHECK_EQ(Bitset::LeafChildSubsplit(Bitset("100001")), Bitset("001000"));
   CHECK_THROWS(Bitset::LeafChildSubsplit(Bitset("100011")));
-  CHECK_EQ(Bitset::LeafEdge(Bitset("100001")), Bitset("100001000"));
-  CHECK_THROWS(Bitset::LeafEdge(Bitset("0000110")));
-  CHECK_THROWS(Bitset::LeafEdge(Bitset("100101")));
+  CHECK_EQ(Bitset::EdgeToLeaf(Bitset("100001")), Bitset("100001000"));
+  CHECK_THROWS(Bitset::EdgeToLeaf(Bitset("0000110")));
+  CHECK_THROWS(Bitset::EdgeToLeaf(Bitset("100101")));
 
   // Restrict a bitset.
-  CHECK_EQ(Remap(Bitset("10101010101"), {0, 2, 4, 6, 8, 10}), Bitset("111111"));
+  CHECK_EQ(Bitset::Remap(Bitset("10101010101"), {0, 2, 4, 6, 8, 10}), Bitset("111111"));
   // If we apply this remap 3 times we should get back to where we started.
   SizeOptionVector rotate120{6, 7, 8, 0, 1, 2, 3, 4, 5};
   auto to_rotate = Bitset("110010100");
-  CHECK_EQ(Remap(Remap(Remap(to_rotate, rotate120), rotate120), rotate120), to_rotate);
+  CHECK_EQ(Bitset::Remap(Bitset::Remap(Bitset::Remap(to_rotate, rotate120), rotate120), rotate120), to_rotate);
   // "Lift" a bitset.
-  CHECK_EQ(Remap(Bitset("11"), {0, std::nullopt, 1}), Bitset("101"));
+  CHECK_EQ(Bitset::Remap(Bitset("11"), {0, std::nullopt, 1}), Bitset("101"));
 }
 
 TEST_CASE("Bitset: Subsplit Sort") {

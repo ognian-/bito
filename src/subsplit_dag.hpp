@@ -31,7 +31,6 @@
 // zeros (e.g. for taxon_count_ = 4, 1111|0000). Note that this implies that the DAG
 // root node only has rotated children. Children of the DAG root node are called
 // "rootsplits" and partition the whole taxon set.
-// TODO: What are edge idx's used for?
 
 #ifndef SRC_SUBSPLIT_DAG_HPP_
 #define SRC_SUBSPLIT_DAG_HPP_
@@ -328,9 +327,6 @@ class SubsplitDAG {
   // Add an adjacent node pair to the DAG.
   ModificationResult AddNodePair(const Bitset &parent_subsplit,
                                  const Bitset &child_subsplit);
-  // Remove an adjacent node pair to the DAG.
-  ModificationResult RemoveNodePair(const Bitset &parent_supsplit,
-                                    const Bitset &child_subsplit);
   // Add all tree topologies in topology_counter to DAG.
   std::tuple<BitsetSizeMap, SizeBitsetMap, BitsetVector> ProcessTopologyCounter(
       const Node::TopologyCounter &topology_counter);
@@ -376,16 +372,6 @@ class SubsplitDAG {
   // - Each clade of the child node has at least 1 child.
   bool IsValidAddNodePair(const Bitset &parent_subsplit,
                           const Bitset &child_subsplit) const;
-  // Check if it is valid to remove given node pair. Specifically, check that:
-  // - The nodes are adjacent.
-  // - The nodes both exist in the DAG.
-  // - For parents and children of all removed nodes contain alternate parents and
-  // children (so, more than one edge of that type).
-  //   (e.g., if node X is being removed from DAG and is a sorted child of Y, then Y
-  //   needs to have more than one outgoing sorted edge, otherwise the removal of X
-  //   will make Y an invalid node.)
-  bool IsValidRemoveNodePair(const Bitset &parent_subsplit,
-                             const Bitset &child_subsplit) const;
 
   // ** Miscellaneous methods:
 
@@ -506,14 +492,12 @@ class SubsplitDAG {
   // - Map of all DAG Edges:
   //    - [ (parent_id, child_id) Node Id Pairs => Edge/PCSP Idxs. ]
   std::map<SizePair, size_t> dag_edges_;
-  // TODO: FIX THIS DESCRIPTION
   // - Map of all DAG Nodes:
   //    - [ Node Subsplit (Bitset) => Node Id ]
   // A node's id is equivalent to its index in dag_nodes_. The first entries are
   // reserved for leaf subsplits. The last entries are reserved for rootsplits. The DAG
   // root node has the highest node id.
   BitsetSizeMap subsplit_to_id_;
-  // TODO: PROPOSED ADDITION
   // - Map of all Clades from DAG Nodes:
   //    - [ Node Clade (Bitset) => Id Vector of Nodes whose Subsplits containing Clade ]
   BitsetSizeMap clade_to_ids_;

@@ -90,7 +90,7 @@ class GPInstance {
   void CheckSequencesAndTreesLoaded() const;
 
   size_t GetEdgeIndexForLeafNode(const Bitset &parent_subsplit,
-                                  const Node *leaf_node) const;
+                                 const Node *leaf_node) const;
   RootedTreeCollection TreesWithGPBranchLengthsOfTopologies(
       Node::NodePtrVec &&topologies) const;
   StringDoubleVector PrettyIndexedVector(EigenConstVectorXdRef v);

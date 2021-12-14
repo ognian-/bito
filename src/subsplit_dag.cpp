@@ -12,7 +12,6 @@
 SubsplitDAG::SubsplitDAG()
     : taxon_count_(0), edge_count_without_leaf_subsplits_(0), topology_count_(0.) {}
 
-// TODO: Add Taxon names to the constructor.
 SubsplitDAG::SubsplitDAG(size_t taxon_count,
                          const Node::TopologyCounter &topology_counter,
                          const TagStringMap &tag_taxon_map)
@@ -59,7 +58,7 @@ int SubsplitDAG::Compare(const SubsplitDAG &lhs, const SubsplitDAG &rhs) {
     lhs_nodes[i] =
         SubsplitDAG::BitsetTranslateViaTaxonTranslationMap(lhs_nodes[i], taxon_map);
     // Verify subsplit clades are in 'sorted' order.
-    lhs_nodes[i] = lhs_nodes[i].SubsplitSort();
+    lhs_nodes[i] = lhs_nodes[i].SubsplitSortClades();
   }
   std::sort(lhs_nodes.begin(), lhs_nodes.end());
   if (lhs_nodes != rhs_nodes) {
@@ -72,7 +71,7 @@ int SubsplitDAG::Compare(const SubsplitDAG &lhs, const SubsplitDAG &rhs) {
   for (size_t i = 0; i < lhs_edges.size(); i++) {
     lhs_edges[i] =
         SubsplitDAG::BitsetTranslateViaTaxonTranslationMap(lhs_edges[i], taxon_map);
-    lhs_edges[i] = lhs_edges[i].EdgeSort();
+    lhs_edges[i] = lhs_edges[i].EdgeSortClades();
   }
   std::sort(lhs_edges.begin(), lhs_edges.end());
   if (lhs_edges != rhs_edges) {
@@ -142,8 +141,8 @@ void SubsplitDAG::PrintNodes() const {
 }
 
 void SubsplitDAG::PrintEdgeIndexer() const {
-  for (const auto &[pcsp, idx] : BuildEdgeIndexer()) {
-    std::cout << idx << ": " << pcsp.EdgeToString() << std::endl;
+  for (const auto &[edge, idx] : BuildEdgeIndexer()) {
+    std::cout << idx << ": " << edge.EdgeToString() << std::endl;
   }
 }
 
@@ -155,9 +154,9 @@ void SubsplitDAG::PrintDAGEdges() const {
 }
 
 void SubsplitDAG::PrintParentToRange() const {
-  for (const auto &[subsplit, pcsp_range] : parent_to_child_range_) {
-    std::cout << subsplit.SubsplitToString() << ": [" << pcsp_range.first << ", "
-              << pcsp_range.second << "]" << std::endl;
+  for (const auto &[subsplit, edge_range] : parent_to_child_range_) {
+    std::cout << subsplit.SubsplitToString() << ": [" << edge_range.first << ", "
+              << edge_range.second << "]" << std::endl;
   }
 }
 
@@ -861,7 +860,8 @@ std::pair<SizeVector, SizeVector> SubsplitDAG::BuildParentIdVector(
   for (const auto &[potential_parent_subsplit, node_id] : subsplit_to_id_) {
     if (subsplit.SubsplitIsLeftChildOf(potential_parent_subsplit)) {
       left_parents.push_back(node_id);
-    } else if (subsplit.SubsplitIsRightChildOf(potential_parent_subsplit)) {
+    } 
+    else if (subsplit.SubsplitIsRightChildOf(potential_parent_subsplit)) {
       right_parents.push_back(node_id);
     }
   }
@@ -875,7 +875,8 @@ std::pair<SizeVector, SizeVector> SubsplitDAG::BuildChildIdVector(
   for (const auto &[potential_child_subsplit, node_id] : subsplit_to_id_) {
     if (potential_child_subsplit.SubsplitIsLeftChildOf(subsplit)) {
       left_children.push_back(node_id);
-    } else if (potential_child_subsplit.SubsplitIsRightChildOf(subsplit)) {
+    } 
+    else if (potential_child_subsplit.SubsplitIsRightChildOf(subsplit)) {
       right_children.push_back(node_id);
     }
   }
@@ -1036,48 +1037,6 @@ SubsplitDAG::ModificationResult SubsplitDAG::AddNodePair(const Bitset &parent_su
   return {added_node_ids, added_edge_idxs, node_reindexer, edge_reindexer};
 }
 
-SubsplitDAG::ModificationResult SubsplitDAG::RemoveNodePair(
-    const Bitset &parent_subsplit, const Bitset &child_subsplit) {
-  // Check that removal of node pair will maintain a valid DAG.
-  Assert(IsValidRemoveNodePair(parent_subsplit, child_subsplit),
-         "The given pair of nodes is incompatible with DAG in "
-         "SubsplitDAG::RemoveNodePair.");
-  // Output vectors.
-  SizeVector removed_node_ids, removed_edge_idxs, node_reindexer, edge_reindexer;
-
-  auto parent_id = GetDAGNodeId(parent_subsplit);
-  auto child_id = GetDAGNodeId(child_subsplit);
-  removed_node_ids = {parent_id, child_id};
-  // Disconnect nodes: remove all edges connected to parent node and child node.
-  for (const auto node_id : removed_node_ids) {
-    const auto is_parent = (node_id == parent_id);
-    const auto node = GetDAGNode(node_id);
-    // Remove parents and children of given node.
-    for (const bool &leafward : {true, false}) {
-      // Remove rotated and sorted adjacent nodes of given node.
-      for (const bool &rotated : {true, false}) {
-        const auto adjacent_ids = node->GetLeafwardOrRootward(leafward, rotated);
-        if (is_parent) {
-          for (const auto adjacent_id : adjacent_ids) {
-            DeleteEdge(node_id, adjacent_id, rotated);
-            auto edge_idx = GetEdgeIdx(node_id, adjacent_id);
-            removed_edge_idxs.push_back(edge_idx);
-          }
-        } else {
-          for (const auto adjacent_id : adjacent_ids) {
-            DeleteEdge(adjacent_id, node_id, rotated);
-            auto edge_idx = GetEdgeIdx(adjacent_id, node_id);
-            removed_edge_idxs.push_back(edge_idx);
-          }
-        }
-      }
-    }
-  }
-  // Remove pair of nodes.
-  DeleteNode(parent_subsplit);
-  DeleteNode(child_subsplit);
-}
-
 // ** Validation Test methods:
 
 bool SubsplitDAG::IsConsistent() const {
@@ -1086,12 +1045,15 @@ bool SubsplitDAG::IsConsistent() const {
 }
 
 bool SubsplitDAG::IsValid() const {
-  IterateOverRealNodes([this](const SubsplitDAGNode *node) {
-    if (node->IsValid() == false) {
-      return false;
+  bool has_invalid_node = false;
+  IterateOverRealNodes([this, &has_invalid_node](const SubsplitDAGNode *node) {
+    if (has_invalid_node == false) {
+      if (node->IsValid() == false) {
+        has_invalid_node = true;
+      }
     }
   });
-  return true;
+  return has_invalid_node;
 }
 
 bool SubsplitDAG::IsValidAddNodePair(const Bitset &parent_subsplit,
@@ -1115,8 +1077,8 @@ bool SubsplitDAG::IsValidAddNodePair(const Bitset &parent_subsplit,
   auto [left_children_of_child, right_children_of_child] =
       GetChildNodeCounts(child_subsplit);
   // Add child to parent's adjacent nodes.
-  const bool is_child_rotated = child_subsplit.SubsplitIsLeftChildOf(parent_subsplit);
-  if (is_child_rotated) {
+  const bool is_left_child = child_subsplit.SubsplitIsLeftChildOf(parent_subsplit);
+  if (is_left_child) {
     left_children_of_parent++;
   } else {
     right_children_of_child++;
@@ -1131,25 +1093,15 @@ bool SubsplitDAG::IsValidAddNodePair(const Bitset &parent_subsplit,
   // (2) Nodes do not add or remove taxa.
   if ((parent_subsplit.size() != 2 * taxon_count_) ||
       (child_subsplit.size() != 2 * taxon_count_)) {
-    std::cout << "BITSETS: " << parent_subsplit.SubsplitToString() << ", "
-              << child_subsplit.SubsplitToString() << std::endl;
-    std::cout << "NOT VALID => taxon_count" << std::endl;
     return false;
   }
   // (3) The parent node has at least one parent, and at least one rotated and sorted
-  // child.
-  // (* including the added child node)
+  // child (including the added child node).
   const bool parent_has_parent =
       (left_parents_of_parent > 0) || (right_parents_of_parent > 0);
   const bool parent_has_children =
       (left_children_of_parent > 0) && (right_children_of_parent > 0);
   if ((parent_has_parent && parent_has_children) == false) {
-    std::cout << "BITSETS: " << parent_subsplit.SubsplitToString() << ", "
-              << child_subsplit.SubsplitToString() << std::endl;
-    std::cout << "NOT VALID => parent_node" << std::endl;
-    std::cout << "PARENT_COUNTS: " << left_parents_of_parent << " "
-              << right_parents_of_parent << " " << left_children_of_parent << " "
-              << right_children_of_parent << std::endl;
     return false;
   }
   // (4) The child node has at least one parent, and at least one rotated and sorted
@@ -1158,76 +1110,7 @@ bool SubsplitDAG::IsValidAddNodePair(const Bitset &parent_subsplit,
   const bool child_has_children =
       (left_children_of_child > 0) && (right_children_of_child > 0);
   if (child_has_children == false) {
-    std::cout << "BITSETS: " << parent_subsplit.SubsplitToString() << ", "
-              << child_subsplit.SubsplitToString() << std::endl;
-    std::cout << "NOT VALID => child_node" << std::endl;
-    std::cout << "CHILD_COUNTS: " << left_children_of_child << " "
-              << right_children_of_child << std::endl;
     return false;
-  }
-  return true;
-}
-
-bool SubsplitDAG::IsValidRemoveNodePair(const Bitset &parent_subsplit,
-                                        const Bitset &child_subsplit) const {
-  // (1) Check that parent and child are both in the DAG.
-  if ((ContainsNode(parent_subsplit) && ContainsNode(child_subsplit)) == false) {
-    return false;
-  }
-  // (2) Check that they are a valid parent/child pair.
-  if (child_subsplit.SubsplitIsLeftChildOf(parent_subsplit) ||
-      child_subsplit.SubsplitIsRightChildOf(parent_subsplit)) {
-  }
-  // (3) Check that parent is not the root node and child is not a leaf node (at least
-  // for now, considering removing leaves illegal).
-  if (parent_subsplit.SubsplitIsRoot() || child_subsplit.SubsplitIsLeaf()) {
-    return false;
-  }
-  auto parent_id = GetDAGNodeId(parent_subsplit);
-  auto child_id = GetDAGNodeId(child_subsplit);
-  auto parent_node = GetDAGNode(parent_id);
-  auto child_node = GetDAGNode(child_id);
-  // (4) Check that all parents and children of removed nodes have alternate parents and
-  // children (more than one).
-  for (const auto &node : {parent_node, child_node}) {
-    const bool is_parent = (node == parent_node);
-    const size_t node_id = (is_parent ? parent_id : child_id);
-    for (const auto &leafward : {true, false}) {
-      for (const auto &rotated : {true, false}) {
-        // All nodes adjacent to the nodes to be removed.
-        const auto adjacent_ids = node->GetLeafwardOrRootward(leafward, rotated);
-        for (const auto &adjacent_id : adjacent_ids) {
-          // Check if adjacent nodes have alternate paths (greater than two edges).
-          // (4a) If looking leafward, then the adjacent node is the child.
-          // Therefore, we are looking at the adjacent node's rootward edges.
-          // In the case of rootward edges, we look at the sum of sorted and rotated
-          // edges. (4b) If looking rootward, then the adjacent node is the parent.
-          // Therefore, we are looking at the adjacent node's leafward edges.
-          // In that case of leafward edges, we look at the sorted and rotated edges
-          // separately.
-          const auto adjacent_node = GetDAGNode(adjacent_id);
-          auto adjacent_node_count =
-              adjacent_node->GetLeafwardOrRootward(!leafward, rotated).size();
-          if (leafward) {
-            adjacent_node_count +=
-                adjacent_node->GetLeafwardOrRootward(!leafward, !rotated).size();
-          }
-          if (adjacent_node_count < 2) {
-            // If there are no alternate edges, then fails, except in the case of the
-            // edge connecting the parent node to child node.
-            if (is_parent) {
-              if (adjacent_id != child_id) {
-                return false;
-              }
-            } else {
-              if (adjacent_id != parent_id) {
-                return false;
-              }
-            }
-          }
-        }
-      }
-    }
   }
   return true;
 }

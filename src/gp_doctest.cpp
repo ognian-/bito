@@ -595,7 +595,7 @@ TEST_CASE("GPInstance: test GPCSP indexes") {
   auto& dag = inst.GetDAG();
   dag.ReversePostorderIndexTraversal(
       [&dag](size_t parent_id, bool rotated, size_t child_id, size_t gpcsp_idx) {
-        CHECK_EQ(dag.EdgeIndexOfIds(parent_id, child_id), gpcsp_idx);
+        CHECK_EQ(dag.GetEdgeIdx(parent_id, child_id), gpcsp_idx);
       });
 }
 
@@ -615,25 +615,26 @@ TEST_CASE("GPInstance: IsValidAddNodePair tests") {
   const std::string fasta_path = "data/five_taxon.fasta";
   auto inst = GPInstanceOfFiles(fasta_path, "data/five_taxon_rooted_more_2.nwk");
   auto& dag = inst.GetDAG();
-  // Nodes are not adjacent (12|34 and 2|4).
+
+  // (NOT_VALID) Nodes are not adjacent (12|34 and 2|4).
   CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("01100", "00011"),
                                 Bitset::Subsplit("00100", "00001")));
-  // Nodes have 5 taxa while the DAG has 4 (12|34 and 1|2).
+  // (NOT_VALID) Nodes have 5 taxa while the DAG has 4 (12|34 and 1|2).
   CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("011000", "000110"),
                                 Bitset::Subsplit("010000", "001000")));
-  // Parent node does not have a parent (12|3 and 1|2).
+  // (NOT_VALID) Parent node does not have a parent (12|3 and 1|2).
   CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("01100", "00010"),
                                 Bitset::Subsplit("01000", "00100")));
-  // Rotated clade of the parent node does not have a child (02|134 and 1|34).
+  // (NOT_VALID) Rotated clade of the parent node does not have a child (02|134 and 1|34).
   CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("10100", "01011"),
                                 Bitset::Subsplit("01000", "00011")));
-  // Rotated clade of the child node does not have a child (0123|4 and 023|1).
+  // (NOT_VALID) Rotated clade of the child node does not have a child (0123|4 and 023|1).
   CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("11110", "00001"),
                                 Bitset::Subsplit("10110", "01000")));
-  // Sorted clade of the child node does not have a child (0123|4 and 0|123).
+  // (NOT_VALID) Sorted clade of the child node does not have a child (0123|4 and 0|123).
   CHECK(!dag.IsValidAddNodePair(Bitset::Subsplit("11110", "00001"),
                                 Bitset::Subsplit("10000", "01110")));
-  // Valid new node pair (0123|4 and 012|3).
+  // (VALID) Valid new node pair (0123|4 and 012|3).
   CHECK(dag.IsValidAddNodePair(Bitset::Subsplit("11110", "00001"),
                                Bitset::Subsplit("11100", "00010")));
 }
@@ -721,11 +722,11 @@ TEST_CASE("GPInstance: AddNodePair tests") {
   // Check that `subsplit_to_id_` node ids were updated.
   CHECK_EQ(dag.GetDAGNodeId(node_14->GetBitset()), 14);
   // Check that `dag_edges_` node ids were updated.
-  CHECK_EQ(dag.EdgeIndexOfIds(15, 14), 9);
+  CHECK_EQ(dag.GetEdgeIdx(15, 14), 9);
   // Check that `dag_edges_` edge idxs were updated.
-  CHECK_EQ(dag.EdgeIndexOfIds(14, 13), 8);
-  CHECK_EQ(dag.EdgeIndexOfIds(16, 13), 12);
-  CHECK_EQ(dag.EdgeIndexOfIds(11, 4), 25);
+  CHECK_EQ(dag.GetEdgeIdx(14, 13), 8);
+  CHECK_EQ(dag.GetEdgeIdx(16, 13), 12);
+  CHECK_EQ(dag.GetEdgeIdx(11, 4), 25);
   // Check that `parent_to_child_range_` was updated.
   CHECK_EQ(dag.GetEdgeRange(node_14->GetBitset(), false).second, 9);
   CHECK_EQ(dag.GetEdgeRange(dag.GetDAGNode(16)->GetBitset(), false).first, 11);

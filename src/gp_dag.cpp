@@ -146,8 +146,8 @@ GPOperationVector GPDAG::ComputeLikelihoods() const {
     IterateOverLeafwardEdges(
         node, [this, node, &operations](const bool rotated,
                                         const SubsplitDAGNode *child_node) {
-          const auto edge_idx = EdgeIndexOfIds(node->Id(), child_node->Id());
-          operations.push_back(Likelihood{edge_idx,
+          const auto gpcsp_idx = GetEdgeIdx(node->Id(), child_node->Id());
+          operations.push_back(Likelihood{gpcsp_idx,
                                           GetPLVIndex(RPLVType(rotated), node->Id()),
                                           GetPLVIndex(PLVType::P, child_node->Id())});
         });
@@ -168,7 +168,7 @@ GPOperationVector GPDAG::MarginalLikelihood() const {
   for (const auto &rootsplit_id : RootsplitIds()) {
     operations.push_back(GPOperations::IncrementMarginalLikelihood{
         GetPLVIndex(PLVType::R_HAT, rootsplit_id),
-        EdgeIndexOfIds(DAGRootNodeId(), rootsplit_id),
+        GetEdgeIdx(DAGRootNodeId(), rootsplit_id),
         GetPLVIndex(PLVType::P, rootsplit_id)});
   }
   return operations;
@@ -203,9 +203,9 @@ GPOperationVector GPDAG::SetLeafwardZero() const {
 GPOperationVector GPDAG::SetRhatToStationary() const {
   GPOperationVector operations;
   for (const auto &rootsplit_id : RootsplitIds()) {
-    size_t root_edge_idx = EdgeIndexOfIds(DAGRootNodeId(), rootsplit_id);
+    size_t root_gpcsp_idx = GetEdgeIdx(DAGRootNodeId(), rootsplit_id);
     operations.push_back(SetToStationaryDistribution{
-        GetPLVIndex(PLVType::R_HAT, rootsplit_id), root_edge_idx});
+        GetPLVIndex(PLVType::R_HAT, rootsplit_id), root_gpcsp_idx});
   }
   return operations;
 }
@@ -283,9 +283,9 @@ void GPDAG::AddPhatOperations(const SubsplitDAGNode *node, bool rotated,
   const size_t dest_idx = GetPLVIndex(plv_type, node->Id());
   GPOperationVector new_operations;
   for (const size_t &child_idx : node->GetLeafward(rotated)) {
-    const auto edge_idx = EdgeIndexOfIds(parent_idx, child_idx);
+    const auto gpcsp_idx = GetEdgeIdx(parent_idx, child_idx);
     new_operations.push_back(IncrementWithWeightedEvolvedPLV{
-        dest_idx, edge_idx, GetPLVIndex(PLVType::P, child_idx)});
+        dest_idx, gpcsp_idx, GetPLVIndex(PLVType::P, child_idx)});
   }
   AppendOperationsAfterPrepForMarginalization(operations, new_operations);
 }
@@ -298,7 +298,7 @@ void GPDAG::AddRhatOperations(const SubsplitDAGNode *node,
                                           const SubsplitDAGNode *parent_node) {
         new_operations.push_back(IncrementWithWeightedEvolvedPLV{
             GetPLVIndex(PLVType::R_HAT, node->Id()),
-            EdgeIndexOfIds(parent_node->Id(), node->Id()),
+            GetEdgeIdx(parent_node->Id(), node->Id()),
             GetPLVIndex(RPLVType(rotated), parent_node->Id())});
       });
   AppendOperationsAfterPrepForMarginalization(operations, new_operations);
@@ -323,7 +323,7 @@ void GPDAG::UpdateRHat(size_t node_id, GPOperationVector &operations) const {
     PLVType src_plv_type = rotated ? PLVType::R_TILDE : PLVType::R;
     for (size_t parent_id : node->GetRootward(rotated)) {
       new_operations.push_back(IncrementWithWeightedEvolvedPLV{
-          GetPLVIndex(PLVType::R_HAT, node_id), EdgeIndexOfIds(parent_id, node_id),
+          GetPLVIndex(PLVType::R_HAT, node_id), GetEdgeIdx(parent_id, node_id),
           GetPLVIndex(src_plv_type, parent_id)});
     }
   }
@@ -337,15 +337,15 @@ void GPDAG::UpdateRHat(size_t node_id, GPOperationVector &operations) const {
 void GPDAG::UpdatePHatComputeLikelihood(size_t node_id, size_t child_node_id,
                                         bool rotated,
                                         GPOperationVector &operations) const {
-  const auto edge_idx = EdgeIndexOfIds(node_id, child_node_id);
+  const auto gpcsp_idx = GetEdgeIdx(node_id, child_node_id);
   // Update p_hat(s)
   GPOperationVector new_operations;
   new_operations.push_back(IncrementWithWeightedEvolvedPLV{
       GetPLVIndex(rotated ? PLVType::P_HAT_TILDE : PLVType::P_HAT, node_id),
-      edge_idx,
+      gpcsp_idx,
       GetPLVIndex(PLVType::P, child_node_id),
   });
-  new_operations.push_back(Likelihood{edge_idx,
+  new_operations.push_back(Likelihood{gpcsp_idx,
                                       GetPLVIndex(RPLVType(rotated), node_id),
                                       GetPLVIndex(PLVType::P, child_node_id)});
   AppendOperationsAfterPrepForMarginalization(operations, new_operations);
@@ -354,15 +354,15 @@ void GPDAG::UpdatePHatComputeLikelihood(size_t node_id, size_t child_node_id,
 void GPDAG::OptimizeBranchLengthUpdatePHat(size_t node_id, size_t child_node_id,
                                            bool rotated,
                                            GPOperationVector &operations) const {
-  size_t edge_idx = EdgeIndexOfIds(node_id, child_node_id);
+  size_t gpcsp_idx = GetEdgeIdx(node_id, child_node_id);
   operations.push_back(OptimizeBranchLength{GetPLVIndex(PLVType::P, child_node_id),
                                             GetPLVIndex(RPLVType(rotated), node_id),
-                                            edge_idx});
+                                            gpcsp_idx});
   // Update p_hat(s)
   GPOperationVector new_operations;
   new_operations.push_back(IncrementWithWeightedEvolvedPLV{
       GetPLVIndex(rotated ? PLVType::P_HAT_TILDE : PLVType::P_HAT, node_id),
-      edge_idx,
+      gpcsp_idx,
       GetPLVIndex(PLVType::P, child_node_id),
   });
   AppendOperationsAfterPrepForMarginalization(operations, new_operations);
@@ -373,11 +373,11 @@ QuartetHybridRequest GPDAG::QuartetHybridRequestOf(size_t parent_id, bool rotate
   QuartetTipVector rootward_tips;
   IterateOverRootwardEdgesAndParents(
       GetDAGNode(parent_id),
-      [this, &rootward_tips](const size_t edge_idx, const bool rootward_rotated,
+      [this, &rootward_tips](const size_t gpcsp_idx, const bool rootward_rotated,
                              const size_t grandparent_id) {
         rootward_tips.emplace_back(
             grandparent_id, GetPLVIndex(RPLVType(rootward_rotated), grandparent_id),
-            edge_idx);
+            gpcsp_idx);
       });
 
   QuartetTipVector sister_tips;
@@ -397,17 +397,17 @@ QuartetHybridRequest GPDAG::QuartetHybridRequestOf(size_t parent_id, bool rotate
   QuartetTipVector sorted_tips;
   IterateOverLeafwardEdgesAndChildren(
       GetDAGNode(child_id), [this, &rotated_tips, &sorted_tips](
-                                const size_t edge_idx, const bool leafward_rotated,
+                                const size_t gpcsp_idx, const bool leafward_rotated,
                                 const size_t grandchild_id) {
         if (leafward_rotated) {
           rotated_tips.emplace_back(grandchild_id,
-                                    GetPLVIndex(PLVType::P, grandchild_id), edge_idx);
+                                    GetPLVIndex(PLVType::P, grandchild_id), gpcsp_idx);
         } else {
           sorted_tips.emplace_back(grandchild_id,
-                                   GetPLVIndex(PLVType::P, grandchild_id), edge_idx);
+                                   GetPLVIndex(PLVType::P, grandchild_id), gpcsp_idx);
         }
       });
-  return QuartetHybridRequest(EdgeIndexOfIds(parent_id, child_id),
-                              std::move(rootward_tips), std::move(sister_tips),
-                              std::move(rotated_tips), std::move(sorted_tips));
+  return QuartetHybridRequest(GetEdgeIdx(parent_id, child_id), std::move(rootward_tips),
+                              std::move(sister_tips), std::move(rotated_tips),
+                              std::move(sorted_tips));
 }

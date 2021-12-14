@@ -355,7 +355,7 @@ Bitset Bitset::SubsplitRotate() const {
   return clade_1 + clade_0;
 }
 
-Bitset Bitset::SubsplitSort() const {
+Bitset Bitset::SubsplitSortClades() const {
   Assert(size() % 2 == 0, "Bitset::SubsplitRotate requires an even-size bitset.");
   Bitset clade_0 = SubsplitGetClade(0);
   Bitset clade_1 = SubsplitGetClade(1);
@@ -544,7 +544,7 @@ bool Bitset::EdgeIsLeaf() const {
   return EdgeGetClade(2).None();
 }
 
-Bitset Bitset::EdgeSort() const {
+Bitset Bitset::EdgeSortClades() const {
   Bitset parent = EdgeGetParentSubsplit();
   Bitset child = EdgeGetChildSubsplit();
   return Bitset::Edge(parent, child);
@@ -600,7 +600,7 @@ Bitset Bitset::LeafChildSubsplit(const Bitset& parent_subsplit) {
   return LeafSubsplit(parent_subsplit.SubsplitGetClade(1));
 }
 
-Bitset Bitset::LeafEdge(const Bitset& parent_subsplit) {
+Bitset Bitset::EdgeToLeaf(const Bitset& parent_subsplit) {
   AssertSubsplitIsLeafAdjacent(parent_subsplit);
   const auto taxon_count = parent_subsplit.SubsplitGetCladeSize();
   Bitset leaf(3 * taxon_count);
@@ -620,13 +620,13 @@ Bitset Bitset::RootsplitOfHalf(const Bitset& subsplit_half) {
   return ~half + half;
 }
 
-Bitset Bitset::EdgeOfRootsplit(const Bitset& rootsplit) {
+Bitset Bitset::EdgeToRootsplit(const Bitset& rootsplit) {
   Assert(rootsplit.SubsplitIsRootsplit(),
-         "Given subsplit is not rootsplit in Bitset::EdgeOfRootsplit.");
+         "Given subsplit is not rootsplit in Bitset::EdgeToRootsplit.");
   return Edge(DAGRootSubsplitOfTaxonCount(rootsplit.size() / 2), rootsplit);
 }
 
-Bitset Remap(const Bitset& bitset, const SizeOptionVector& idx_table) {
+Bitset Bitset::Remap(const Bitset& bitset, const SizeOptionVector& idx_table) {
   Bitset result(idx_table.size(), false);
   for (size_t i = 0; i < idx_table.size(); ++i) {
     if (idx_table[i].has_value() && bitset[idx_table[i].value()]) {

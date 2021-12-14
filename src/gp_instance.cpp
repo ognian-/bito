@@ -196,7 +196,7 @@ void GPInstance::EstimateSBNParameters() {
 void GPInstance::CalculateHybridMarginals() {
   std::cout << "Calculating hybrid marginals\n";
   PopulatePLVs();
-  dag_.ReversePostorderIndexTraversal([this](const size_t parent_id, const bool rotated,
+  dag_.TopologicalEdgeTraversal([this](const size_t parent_id, const bool rotated,
                                              const size_t child_id, const size_t) {
     this->GetEngine()->ProcessQuartetHybridRequest(
         dag_.QuartetHybridRequestOf(parent_id, rotated, child_id));

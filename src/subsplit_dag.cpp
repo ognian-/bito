@@ -93,7 +93,7 @@ bool operator!=(const SubsplitDAG &lhs, const SubsplitDAG &rhs) {
 void SubsplitDAG::CountTopologies() {
   topology_count_below_ = EigenVectorXd::Ones(NodeCount());
 
-  for (const auto &node_id : RootwardPassTraversal(true)) {
+  for (const auto &node_id : RootwardEdgeTraversalTrace(true)) {
     const auto &node = GetDAGNode(node_id);
     for (const bool rotated : {true, false}) {
       // When there are no leafward nodes in the `rotated` direction, we set the number
@@ -233,7 +233,7 @@ std::string SubsplitDAG::ToDot(bool show_index_labels) const {
 
 BitsetSizeMap SubsplitDAG::BuildEdgeIndexer() const {
   auto edge_indexer = BitsetSizeMap();
-  ReversePostorderIndexTraversal([this, &edge_indexer](size_t parent_id, bool rotated,
+  TopologicalEdgeTraversal([this, &edge_indexer](size_t parent_id, bool rotated,
                                                        size_t child_id,
                                                        size_t edge_idx) {
     const auto parent_subsplit = GetDAGNode(parent_id)->GetBitset(rotated);
@@ -320,7 +320,7 @@ std::map<std::string, size_t> &SubsplitDAG::GetTaxonMap() { return dag_taxons_; 
 EigenVectorXd SubsplitDAG::BuildUniformOnTopologicalSupportPrior() const {
   EigenVectorXd q = EigenVectorXd::Ones(EdgeCountWithLeafSubsplits());
 
-  for (const auto &node_id : RootwardPassTraversal(true)) {
+  for (const auto &node_id : RootwardEdgeTraversalTrace(true)) {
     const auto &node = GetDAGNode(node_id);
     for (const bool rotated : {false, true}) {
       if (!node->GetLeafward(rotated).empty()) {
@@ -372,7 +372,7 @@ Node::NodePtrVec SubsplitDAG::GenerateAllTopologies() const {
     return topologies;
   };
 
-  for (const auto &node_id : RootwardPassTraversal(true)) {
+  for (const auto &node_id : RootwardEdgeTraversalTrace(true)) {
     const auto &node = GetDAGNode(node_id);
     if (node->IsLeaf()) {
       topology_below.at(node_id).push_back(Node::Leaf(node_id));
@@ -489,7 +489,7 @@ EigenVectorXd SubsplitDAG::UnconditionalNodeProbabilities(
   node_probabilities.setZero();
   node_probabilities[DAGRootNodeId()] = 1.;
 
-  ReversePostorderIndexTraversal([this, &node_probabilities,
+  TopologicalEdgeTraversal([this, &node_probabilities,
                                   &normalized_sbn_parameters](
                                      const size_t parent_id, const bool,
                                      const size_t child_id, const size_t edge_idx) {
@@ -524,7 +524,7 @@ EigenVectorXd SubsplitDAG::InvertedGPCSPProbabilities(
   EigenVectorXd inverted_probabilities =
       EigenVectorXd(normalized_sbn_parameters.size());
   inverted_probabilities.setOnes();
-  ReversePostorderIndexTraversal(
+  TopologicalEdgeTraversal(
       [this, &node_probabilities, &normalized_sbn_parameters, &inverted_probabilities](
           const size_t parent_id, const bool, const size_t child_id,
           const size_t edge_idx) {
@@ -727,13 +727,13 @@ void SubsplitDAG::LeafwardDepthFirst(size_t node_id, SizeVector &visit_order,
                                      std::unordered_set<size_t> &visited_nodes) const {
   // Add to set of all visited nodes.
   SafeInsert(visited_nodes, node_id);
-  // Recurse on sorted children.
+  // Recurse on right/sorted children.
   for (size_t child_id : GetDAGNode(node_id)->GetLeafwardRightward()) {
     if (visited_nodes.count(child_id) == 0) {
       LeafwardDepthFirst(child_id, visit_order, visited_nodes);
     }
   }
-  // Recurse on rotated children.
+  // Recurse on left/rotated children.
   for (size_t child_id : GetDAGNode(node_id)->GetLeafwardLeftward()) {
     if (visited_nodes.count(child_id) == 0) {
       LeafwardDepthFirst(child_id, visit_order, visited_nodes);
@@ -743,7 +743,7 @@ void SubsplitDAG::LeafwardDepthFirst(size_t node_id, SizeVector &visit_order,
   visit_order.push_back(node_id);
 }
 
-SizeVector SubsplitDAG::LeafwardPassTraversal(bool include_dag_root_node) const {
+SizeVector SubsplitDAG::LeafwardEdgeTraversalTrace(bool include_dag_root_node) const {
   SizeVector visit_order;
   std::unordered_set<size_t> visited_nodes;
   if (!include_dag_root_node) {
@@ -755,7 +755,7 @@ SizeVector SubsplitDAG::LeafwardPassTraversal(bool include_dag_root_node) const 
   return visit_order;
 }
 
-SizeVector SubsplitDAG::RootwardPassTraversal(bool include_dag_root_node) const {
+SizeVector SubsplitDAG::RootwardEdgeTraversalTrace(bool include_dag_root_node) const {
   SizeVector visit_order;
   std::unordered_set<size_t> visited_nodes;
   for (const auto &rootsplit_id : RootsplitIds()) {
@@ -767,15 +767,15 @@ SizeVector SubsplitDAG::RootwardPassTraversal(bool include_dag_root_node) const 
   return visit_order;
 }
 
-SizeVector SubsplitDAG::ReversePostorderTraversal() const {
-  auto visit_order = RootwardPassTraversal(true);
+SizeVector SubsplitDAG::TopologicalEdgeTraversalTrace() const {
+  auto visit_order = RootwardEdgeTraversalTrace(true);
   std::reverse(visit_order.begin(), visit_order.end());
   return visit_order;
 }
 
-void SubsplitDAG::ReversePostorderIndexTraversal(
+void SubsplitDAG::TopologicalEdgeTraversal(
     ParentRotationChildEdgeLambda f) const {
-  for (const auto node_id : ReversePostorderTraversal()) {
+  for (const auto node_id : TopologicalEdgeTraversalTrace()) {
     IterateOverLeafwardEdgesAndChildren(
         GetDAGNode(node_id), [&f, &node_id](const size_t edge_idx, const bool rotated,
                                             const size_t child_id) {

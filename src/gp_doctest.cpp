@@ -593,7 +593,7 @@ TEST_CASE("GPInstance: test GPCSP indexes") {
   const std::string fasta_path = "data/7-taxon-slice-of-ds1.fasta";
   auto inst = GPInstanceOfFiles(fasta_path, "data/simplest-hybrid-marginal.nwk");
   auto& dag = inst.GetDAG();
-  dag.ReversePostorderIndexTraversal(
+  dag.TopologicalEdgeTraversal(
       [&dag](size_t parent_id, bool rotated, size_t child_id, size_t gpcsp_idx) {
         CHECK_EQ(dag.GetEdgeIdx(parent_id, child_id), gpcsp_idx);
       });

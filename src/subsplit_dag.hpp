@@ -249,17 +249,25 @@ class SubsplitDAG {
       action.VisitEdge(node_id, child_id, rotated);
     }
   };
-  // #288: consider renaming these re leafward and rootward.
-  // Also, note that they could be called "TraversalTrace" to signify that they are
-  // recording the trace of a traversal.
-  [[nodiscard]] SizeVector LeafwardPassTraversal(bool include_dag_root_node) const;
-  [[nodiscard]] SizeVector RootwardPassTraversal(bool include_dag_root_node) const;
-  [[nodiscard]] SizeVector ReversePostorderTraversal() const;
+
+  // ** DAG Edge Traversal Traces
+  // These function produce a vector of edge indexes representing an ordered traversal of the DAG.
+
+  // Creates a vector of edge idxs representing a leafward DFS postorder traversal of the DAG.
+  [[nodiscard]] SizeVector LeafwardEdgeTraversalTrace(bool include_dag_root_node) const;
+  // Creates a vector of edge idxs representing a rootward DFS postorder traversal of the DAG.
+  [[nodiscard]] SizeVector RootwardEdgeTraversalTrace(bool include_dag_root_node) const;
+  // Creates a vector of edge idxs representing a reverse DFS postorder, leafward traversal of the DAG.
+  // NOTE: A reverse postorder traversal represents a topological sort.
+  [[nodiscard]] SizeVector TopologicalEdgeTraversalTrace() const;
+
+  // ** DAG Edge Traversals with Action
+
   // Do a reverse postorder traversal on the edges of the DAG, including edges from the
   // DAG root node to the rootsplits, supplying the relevant indices to a lambda.
-  void ReversePostorderIndexTraversal(ParentRotationChildEdgeLambda f) const;
+  void TopologicalEdgeTraversal(ParentRotationChildEdgeLambda f) const;
 
-  // ** Distribution methods:
+  // ** Statistical methods:
 
   // Discrete uniform distribution over each subsplit.
   [[nodiscard]] EigenVectorXd BuildUniformQ() const;

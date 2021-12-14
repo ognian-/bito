@@ -160,7 +160,7 @@ GPOperationVector GPDAG::ComputeLikelihoods() const {
 }
 
 GPOperationVector GPDAG::LeafwardPass() const {
-  return LeafwardPass(LeafwardPassTraversal(false));
+  return LeafwardPass(LeafwardEdgeTraversalTrace(false));
 }
 
 GPOperationVector GPDAG::MarginalLikelihood() const {
@@ -175,13 +175,13 @@ GPOperationVector GPDAG::MarginalLikelihood() const {
 }
 
 GPOperationVector GPDAG::RootwardPass() const {
-  return RootwardPass(RootwardPassTraversal(false));
+  return RootwardPass(RootwardEdgeTraversalTrace(false));
 }
 
 GPOperationVector GPDAG::OptimizeSBNParameters() const {
   GPOperationVector operations;
   std::unordered_set<size_t> visited_nodes;
-  for (size_t &id : LeafwardPassTraversal(false)) {
+  for (size_t &id : LeafwardEdgeTraversalTrace(false)) {
     const auto node = GetDAGNode(id);
     OptimizeSBNParametersForASubsplit(node->GetBitset(), operations);
     OptimizeSBNParametersForASubsplit(node->GetBitset().SubsplitRotate(), operations);

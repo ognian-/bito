@@ -61,7 +61,7 @@ class SubsplitDAGGraft {
   size_t DAGRootNodeId() const;
   // Return the node ids corresponding to the rootsplits.
   const SizeVector &RootsplitIds() const;
-  // Get the GPCSP edge index by its parent-child pair subsplits from the DAG nodes.
+  // Get the GPCSP/edge index by its parent-child pair subsplits from the DAG nodes.
   size_t GetGPCSPEdgeIdx(const Bitset &parent_subsplit,
                          const Bitset &child_subsplit) const;
   // Get the GPCSP edge index by its parent-child pair id from the DAG nodes.
@@ -87,6 +87,8 @@ class SubsplitDAGGraft {
   size_t GraftGPCSPCount() const;
   // Total number of edges in host DAG only.
   size_t HostGPCSPCount() const;
+
+  // ** Traversals
 
  private:
   // DAG that the graft is proposed to be connected to.

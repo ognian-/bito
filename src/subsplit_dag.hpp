@@ -250,11 +250,14 @@ class SubsplitDAG {
       action.VisitEdge(node_id, child_id, rotated);
     }
   };
+
+  // ** Edge Index Traversal Traces
   // #288: consider renaming these re leafward and rootward.
   // Also, note that they could be called "TraversalTrace" to signify that they are
-  // recording the trace of a traversal.
+  // recording the trace of a traversal, not doing actual work.
   [[nodiscard]] SizeVector LeafwardPassTraversal(bool include_dag_root_node) const;
   [[nodiscard]] SizeVector RootwardPassTraversal(bool include_dag_root_node) const;
+  // Note: This is leafward topological ordering.
   [[nodiscard]] SizeVector ReversePostorderTraversal() const;
   // Do a reverse postorder traversal on the edges of the DAG, including edges from the
   // DAG root node to the rootsplits, supplying the relevant indices to a lambda.

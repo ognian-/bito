@@ -12,13 +12,25 @@
 #define SRC_SUBSPLIT_DAG_GRAFT_HPP
 
 class SubsplitDAGGraft {
+ private: 
+  // DAG that the graft is proposed to be connected to.
+  SubsplitDAG *host_dag_;
+  // Nodes in the graft.
+  std::vector<std::unique_ptr<SubsplitDAGNode>> graft_nodes_;
+  // Edges in the graft.
+  std::map<SizePair, size_t> graft_edges_;
+  // Nodes that are adjacent to a graft node (connect by edge).
+  std::vector<size_t> graft_adjacent_dag_nodes_;
+  // A map from a clade to the vector of node ids containing that clade.
+  std::map<Bitset, SizeVector> clade_to_ids_;
+  
  public:
   // ** Constructors:
 
-  // Initialize empty graft.
+  // Initialize empty DAGGraft.
   SubsplitDAGGraft(SubsplitDAG &dag);
   // TODO:
-  // Initialize graft with an initial graft.
+  // Initialize DAGGraft with an initial graft.
   SubsplitDAGGraft(SubsplitDAG &dag, NNIOperation &nni);
   SubsplitDAGGraft(SubsplitDAG &dag, Bitset &parent_subsplit, Bitset &child_subsplit);
 
@@ -37,30 +49,27 @@ class SubsplitDAGGraft {
 
   // ** Modify DAG
 
-  // Add node to the graft.
-  void CreateAndInsertNode(const Bitset &node_subsplit);
-  // Add edge to the graft.
-  void CreateAndInsertEdge(const Bitset &parent_subsplit, const Bitset &child_subsplit);
-  // TODO:
   // Add node pair to graft.
-  void AddNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
+  void AddGraftNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
   // TODO:
   // Remove node pair from graft.
-  void RemoveNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
+  void RemoveGraftNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
   // TODO:
   // Clear all nodes and edges from graft for reuse.
-  void Clear();
+  void RemoveAllGrafts();
 
   // ** Getters
 
   // Get node based on node id.
   SubsplitDAGNode *GetDAGNode(const size_t node_id) const;
   // Get the node id based on the subsplit bitset.
-  size_t GetDAGNodeId(const Bitset &subsplit) const;
+  size_t GetNodeId(const Bitset &subsplit) const;
   // Gets the node id of the DAG root.
-  size_t DAGRootNodeId() const;
+  size_t GetRootNodeId() const;
+  // Get the node based on the nodes id.
+  SubsplitDAGNode* GetNode(const size_t node_id) const;
   // Return the node ids corresponding to the rootsplits.
-  const SizeVector &RootsplitIds() const;
+  const SizeVector &GetRootsplitIds() const;
   // Get the GPCSP/edge index by its parent-child pair subsplits from the DAG nodes.
   size_t GetGPCSPEdgeIdx(const Bitset &parent_subsplit,
                          const Bitset &child_subsplit) const;
@@ -82,23 +91,49 @@ class SubsplitDAGGraft {
   // Total number of nodes in host DAG only.
   size_t HostNodeCount() const;
   // Total number of edges in full proposed DAG.
-  size_t GPCSPCount() const;
+  size_t EdgeCount() const;
   // Total number of edges in graft only.
-  size_t GraftGPCSPCount() const;
+  size_t GraftEdgeCount() const;
   // Total number of edges in host DAG only.
-  size_t HostGPCSPCount() const;
+  size_t HostEdgeCount() const;
 
-  // ** Traversals
+  // ** Contains
+
+  // 
+  bool ContainsNode(const Bitset subsplit) const;
+  // 
+  bool ContainsEdge(const Bitset edge) const;
+
+  // ** Traversal
+
+  // 
+  SizeVector LeafwardPostorderTraversalTrace() const;
+  // 
+  SizeVector LeafwardTopologicalTraversalTrace() const;
+
+  // ** Validity Tests
+
+  // Checks if host and graft are in a valid state.
+  bool IsValid() const;
+  // Checks if host and graft are in a valid state to add given node pair.
+  bool IsValidAddNodePair(const Bitset parent_subsplit, const Bitset child_subsplit) const;
+  // Checks if host and graft are in a valid state to remove given node pair.
+  bool IsValidRemoveNodePair(const Bitset parent_subsplit, const Bitset child_subsplit) const;
 
  private:
-  // DAG that the graft is proposed to be connected to.
-  SubsplitDAG *host_dag_;
-  // Nodes in the graft.
-  std::vector<std::unique_ptr<SubsplitDAGNode>> graft_nodes_;
-  // Edges in the graft.
-  std::map<SizePair, size_t> graft_edges_;
-  // Nodes that are adjacent to a graft node (connect by edge).
-  std::vector<size_t> graft_adjacent_dag_nodes_;
+  // ** Modify DAG
+
+  // Add node to the graft.
+  void CreateGraftNode(const Bitset &node_subsplit);
+  // Add edge to the graft.
+  void CreateGraftEdge(const Bitset &parent_subsplit, const Bitset &child_subsplit);
+  // Add node to the graft.
+  void DestroyGraftNode(const Bitset &node_subsplit);
+  void DestroyGraftNode(const size_t node_id);
+  // Add edge to the graft.
+  void DestroyGraftEdge(const Bitset &parent_subsplit, const Bitset &child_node_subsplit);
+  void DestroyGraftEdge(const size_t parent_id, const size_t child_id);
+  void DestroyGraftEdge(const size_t edge_idx);
 };
 
 #endif  // SRC_SUBSPLIT_DAG_GRAFT_HPP

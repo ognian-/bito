@@ -17,32 +17,69 @@ int SubsplitDAGGraft::Compare(SubsplitDAGGraft &dag_a, SubsplitDAG &dag_b) {}
 
 // ** Modify DAG
 
-void SubsplitDAGGraft::CreateAndInsertNode(const Bitset &node_subsplit) {}
+void SubsplitDAGGraft::CreateGraftNode(const Bitset &node_subsplit) {
+  // Add node to node list.
+  size_t node_id = NodeCount();
+  graft_nodes_.push_back(std::make_unique<SubsplitDAGNode>(node_id, subsplit));
+  SafeInsert(subsplit_)
+}
 
-void SubsplitDAGGraft::CreateAndInsertEdge(const Bitset &parent_subsplit,
-                                           const Bitset &child_subsplit) {}
+void SubsplitDAGGraft::CreateGraftEdge(const Bitset &parent_subsplit,
+                                      const Bitset &child_subsplit) {
+  // Add edge to edge list.
 
-void SubsplitDAGGraft::AddNodePair(const Bitset &parent_subsplit,
+}
+
+void SubsplitDAGGraft::DestroyGraftNode(const Bitset &node_subsplit) {
+  // Remove node from node list.
+
+}
+
+void SubsplitDAGGraft::DestroyGraftEdge(const Bitset &parent_subsplit,
+                                                const Bitset &child_subsplit) {
+  // Remove edge from edge list.
+
+}
+
+void SubsplitDAGGraft::AddGraftNodePair(const Bitset &parent_subsplit,
                                    const Bitset &child_subsplit) {
   // Assert that parent and child are a valid node pair to add to DAG.
-  // host_dag_->IsValidAddNodePair(parent_subsplit, child_subsplit);
+  if (host_dag_->IsValidAddNodePair(parent_subsplit, child_subsplit) == false) {
+    
+  }
   // Iterate through dag nodes to find adjacent nodes.
   // host_dag_->IterateOverRealNodes([](SubsplitDAGNode* node){});
 }
 
-void SubsplitDAGGraft::RemoveNodePair(const Bitset &parent_subsplit,
-                                      const Bitset &child_subsplit) {}
+void SubsplitDAGGraft::RemoveGraftNodePair(const Bitset &parent_subsplit,
+                                           const Bitset &child_subsplit) {
+  // Find nodes in node list.
+  // Remove graft edges
+}
 
-void SubsplitDAGGraft::Clear() {
+void SubsplitDAGGraft::RemoveAllGrafts() {
   graft_nodes_.clear();
   graft_edges_.clear();
 }
 
 // ** Getters
 
-size_t SubsplitDAGGraft::GetDAGNodeId(const Bitset &node_subsplit) const {
+SubsplitDAGNode* SubsplitDAGGraft::GetNode(const size_t node_id) const {
   // Check if subsplit is in the host DAG.
   // Check if subsplit is in the graft.
+}
+
+size_t SubsplitDAGGraft::GetNodeId(const Bitset &node_subsplit) const {
+  // Check if subsplit is in the host DAG.
+  if (host_dag_->ContainsNode(node_subsplit)) {
+    return host_dag_->GetNodeId(node_subsplit);
+  }
+  // Check if subsplit is in the graft.
+  
+}
+
+size_t SubsplitDAGGraft::GetRootNodeId() const {
+  return host_dag_->GetRootNodeId();
 }
 
 // ** Counts
@@ -55,18 +92,42 @@ size_t SubsplitDAGGraft::GraftNodeCount() const { return graft_nodes_.size(); }
 
 size_t SubsplitDAGGraft::HostNodeCount() const { return host_dag_->NodeCount(); }
 
-size_t SubsplitDAGGraft::GPCSPCount() const {
-  return HostGPCSPCount() + GraftGPCSPCount();
+size_t SubsplitDAGGraft::EdgeCount() const {
+  return HostEdgeCount() + GraftEdgeCount();
 }
 
-size_t SubsplitDAGGraft::GraftGPCSPCount() const {
-  return HostGPCSPCount() + GraftGPCSPCount();
+size_t SubsplitDAGGraft::GraftEdgeCount() const {
+  return graft_nodes_.size();
 }
 
-size_t SubsplitDAGGraft::HostGPCSPCount() const {
-  return HostGPCSPCount() + GraftGPCSPCount();
+size_t SubsplitDAGGraft::HostEdgeCount() const {
+  return host_dag_->EdgeCount();
+}
+
+// ** Contains
+
+bool SubsplitDAGGraft::ContainsNode(const Bitset subsplit) const {
+
+}
+
+bool SubsplitDAGGraft::ContainsEdge(const Bitset edge_pair) const {
+
 }
 
 // ** Traversals
 
 
+
+// ** Validation Tests
+
+bool SubsplitDAGGraft::IsValid() const {
+  return true;
+}
+
+bool SubsplitDAGGraft::IsValidAddNodePair(const Bitset parent_subsplit, const Bitset child_subsplit) const {
+  return true;
+}
+
+bool SubsplitDAGGraft::IsValidRemoveNodePair(const Bitset parent_subsplit, const Bitset child_subsplit) const {
+  return true;
+}

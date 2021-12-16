@@ -616,7 +616,7 @@ TEST_CASE("GPInstance: test rootsplits") {
   auto inst = GPInstanceOfFiles(fasta_path, "data/simplest-hybrid-marginal.nwk");
   inst.SubsplitDAGToDot("_ignore/outtest.dot", true);
   auto& dag = inst.GetDAG();
-  for (const auto& rootsplit_id : dag.RootsplitIds()) {
+  for (const auto& rootsplit_id : dag.GetRootsplitIds()) {
     const auto rootsplit_node = dag.GetDAGNode(rootsplit_id);
     CHECK(rootsplit_node->IsRootsplit());
   }
@@ -682,8 +682,8 @@ TEST_CASE("GPInstance: AddNodePair tests") {
   CHECK(dag.ContainsNode(parent_subsplit));
   CHECK(dag.ContainsNode(child_subsplit));
   // Check that all necessary edges were created.
-  const auto parent_node = dag.GetDAGNode(dag.GetDAGNodeId(parent_subsplit));
-  const auto child_node = dag.GetDAGNode(dag.GetDAGNodeId(child_subsplit));
+  const auto parent_node = dag.GetDAGNode(dag.GetNodeId(parent_subsplit));
+  const auto child_node = dag.GetDAGNode(dag.GetNodeId(child_subsplit));
   std::map<bool, SizeVector> correct_parents_of_parent{{true, {}}, {false, {16, 14}}};
   std::map<bool, SizeVector> parents_of_parent{
       {true, parent_node->GetRootwardLeftward()},
@@ -731,7 +731,7 @@ TEST_CASE("GPInstance: AddNodePair tests") {
         sorted_children_14.end());
   CHECK_EQ(node_14->Id(), 14);
   // Check that `subsplit_to_id_` node ids were updated.
-  CHECK_EQ(dag.GetDAGNodeId(node_14->GetBitset()), 14);
+  CHECK_EQ(dag.GetNodeId(node_14->GetBitset()), 14);
   // Check that `dag_edges_` node ids were updated.
   CHECK_EQ(dag.GetEdgeIdx(15, 14), 9);
   // Check that `dag_edges_` edge idxs were updated.
@@ -887,17 +887,16 @@ TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
   CHECK_EQ(nni_engine_2.GetAdjacentNNIs(), correct_adjacent_nnis);
 }
 
-//
-// TEST_CASE("NNI Engine: Simplest Evaluation Test")
-// {
-//   // Fasta contains simple sequences for four taxon: x0,x1,x2,x3.
-//   const std::string fasta_path = "data/four_taxon.fasta";
+TEST_CASE("NNI Engine: Simplest Evaluation Test")
+{
+  // Fasta contains simple sequences for four taxon: x0,x1,x2,x3.
+  const std::string fasta_path = "data/four_taxon.fasta";
 
-//   // Print Assorted Information
-//   auto PrintInfo = [](std::string header, GPInstance& inst) {
-//     std::cout << "INFO: " << header << std::endl;
-//     GPDAG& dag = inst.GetDAG();
-//     RootedTreeCollection trees = inst.CurrentlyLoadedTreesWithGPBranchLengths();
+  // Print Assorted Information
+  auto PrintInfo = [](std::string header, GPInstance& inst) {
+    std::cout << "INFO: " << header << std::endl;
+    GPDAG& dag = inst.GetDAG();
+    RootedTreeCollection trees = inst.CurrentlyLoadedTreesWithGPBranchLengths();
 //     // taxons
 //     std::cout << "taxon_names: " << inst.GetTaxonNames() << std::endl;
 //     std::cout << "taxon_map: [ ";
@@ -1116,4 +1115,10 @@ TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
 //   //                      Bitset::Subsplit("0001", "0100"));
 
 //   // CHECK(SubsplitDAG::Compare(dag_A, dag_B) == 0);
-// }
+}
+
+
+TEST_CASE("SubsplitDAGGraft")
+{
+
+}

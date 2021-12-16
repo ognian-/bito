@@ -24,7 +24,7 @@ TidySubsplitDAG::TidySubsplitDAG(size_t taxon_count,
   dirty_sorted_ = EigenArrayXb::Zero(node_count);
 
   SubsplitDAG::DepthFirstWithAction(
-      {DAGRootNodeId()}, SubsplitDAGTraversalAction(
+      {GetRootNodeId()}, SubsplitDAGTraversalAction(
                              // BeforeNode
                              [](size_t node_id) {},
                              // AfterNode
@@ -143,7 +143,7 @@ std::string TidySubsplitDAG::RecordTraversal() {
   std::stringstream result;
   result << std::boolalpha;
   DepthFirstWithTidyAction(
-      {DAGRootNodeId()},
+      {GetRootNodeId()},
       TidySubsplitDAGTraversalAction(
           // BeforeNode
           [](size_t node_id) {},

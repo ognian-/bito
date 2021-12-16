@@ -58,6 +58,7 @@ inline uint32_t LeafCountOfTag(Tag tag) { return UnpackSecondInt(tag); }
     }                                \
   })
 #endif
+
 // Use Failwith when it's a problem with input data versus a problem
 // with program logic. That way we can turn off Assert if we want to.
 // As you can see Assert is implemented in terms of Failwith.
@@ -77,6 +78,8 @@ inline uint32_t LeafCountOfTag(Tag tag) { return UnpackSecondInt(tag); }
     throw std::runtime_error(str_message);        \
   })
 
+// Safely inserts key-value pair into given map.
+// Verifies that key does not already exists in map, raises error otherwise.
 template <class Key, class T, class Hash>
 constexpr void SafeInsert(std::unordered_map<Key, T, Hash> &map, const Key &k,
                           const T &v) {

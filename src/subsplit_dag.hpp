@@ -51,8 +51,6 @@ class SubsplitDAG {
   SubsplitDAG();
   // Build a Subsplit DAG expressing all tree topologies from tree_collection.
   explicit SubsplitDAG(const RootedTreeCollection &tree_collection);
-  // Build a Subsplit DAG from
-  // SubsplitDAG();
 
   // ** Comparator methods:
 
@@ -60,15 +58,14 @@ class SubsplitDAG {
   // set of node and edge bitsets.  However, it does ensure that DAGs have the same id
   // and idxs for their respective nodes and edges, only that they contain the
   // same set of nodes and edges (as long as taxon positions in the
-  // clades have the same mapping). Additionally, this compare does not give a proper
-  // ordering.  It only returns zero for equal, nonzero otherwise.
+  // clades have the same mapping). This compare ensures a total ordering.
   static int Compare(const SubsplitDAG &lhs, const SubsplitDAG &rhs);
   friend bool operator==(const SubsplitDAG &lhs, const SubsplitDAG &rhs);
   friend bool operator!=(const SubsplitDAG &lhs, const SubsplitDAG &rhs);
 
   // ** Count methods:
 
-  // The total number of individual taxa in the
+  // The total number of individual taxa in the DAG.
   size_t TaxonCount() const;
   // The total number of nodes in the DAG (including the root and leaves).
   size_t NodeCount() const;
@@ -132,18 +129,21 @@ class SubsplitDAG {
   size_t GetTaxonId(const std::string &name) const;
   // Get node based on node id.
   SubsplitDAGNode *GetDAGNode(const size_t node_id) const;
-  // Get the node id based on the subsplit bitset.
-  size_t GetDAGNodeId(const Bitset &subsplit) const;
-  // Gets the node id of the DAG root.
-  size_t DAGRootNodeId() const;
-  // Return the node ids corresponding to the rootsplits.
-  const SizeVector &RootsplitIds() const;
-  // Get the PCSP edge index by its parent-child pair subsplits from the DAG nodes.
+  // Get the Node ID based on the subsplit bitset.
+  size_t GetNodeId(const Bitset &subsplit) const;
+  // Gets the Node ID of the DAG root.
+  size_t GetRootNodeId() const;
+  // Return the Node ids corresponding to the rootsplits.
+  const SizeVector &GetRootsplitIds() const;
+  // Get the Edge index by its parent-child pair subsplits from the DAG nodes.
   size_t GetEdgeIdx(const Bitset &parent_subsplit, const Bitset &child_subsplit) const;
-  // Get the PCSP edge index by its parent-child pair id from the DAG nodes.
+  // Get the Edge index by its parent-child pair id from the DAG nodes.
   size_t GetEdgeIdx(size_t parent_id, size_t child_id) const;
-  // Get the range of outgoing idxs from the given clade of a subsplit.
+  // Get the range of outgoing Edge indexes from the given clade of a subsplit.
   SizePair GetEdgeRange(const Bitset &subsplit, const bool rotated) const;
+  // Get a vector of all node ids which are adjacent to the given bitset.
+  SizeVector GetNodesAdjacentTo(const Bitset &node_subsplit) const;
+  SizeVector GetNodesAdjacentTo(const size_t node_id) const;
   // Get set of all taxon names.
   std::vector<std::string> GetSortedVectorOfTaxonNames() const;
   // Get set of all node Subsplit bitsets.
@@ -263,7 +263,7 @@ class SubsplitDAG {
   // DAG root node to the rootsplits, supplying the relevant indices to a lambda.
   void ReversePostorderIndexTraversal(ParentRotationChildEdgeLambda f) const;
 
-  // ** Distribution methods:
+  // ** Statistical methods:
 
   // Discrete uniform distribution over each subsplit.
   [[nodiscard]] EigenVectorXd BuildUniformQ() const;
@@ -273,7 +273,6 @@ class SubsplitDAG {
   // Thus, this will only be a normalized probability distribution for each subsplit if
   // all topologies are in the support.
   [[nodiscard]] EigenVectorXd BuildUniformOnAllTopologiesPrior() const;
-
   // Get a vector from each DAG node index to the probability of sampling that DAG node
   // with the supplied SBN parameters. These SBN parameters must be indexed in a
   // compatible way as the dag_edges_ of the subsplit DAG.
@@ -338,7 +337,7 @@ class SubsplitDAG {
   std::tuple<BitsetSizeMap, SizeBitsetMap, BitsetVector> ProcessTopologyCounter(
       const Node::TopologyCounter &topology_counter);
 
-  // ** Reindexer methods:
+  // ** Reindexer
   // These methods are for building and applying reindexers.
   // A reindexer describes a remapping/transform of identifiers (i.e. node ids, edge
   // idxs) before and after a modification to the DAG. The index is before the
@@ -354,7 +353,7 @@ class SubsplitDAG {
   // Remap all edge idxs according to the edge_reindexer.
   void RemapEdgeIdxs(const SizeVector &edge_reindexer);
 
-  // ** Validation Test methods:
+  // ** Validation Tests
   // These methods are used to assert that a DAG is in a valid state or that given
   // operation will result in a valid DAG.
 
@@ -456,20 +455,22 @@ class SubsplitDAG {
   // Create Edge between given nodes and insert it into the DAG.
   // WARNING: Does not check for redundant edges.
   void CreateAndInsertEdge(const size_t parent_id, const size_t child_id, bool rotated);
+  // TODO:
   // Delete Node from the DAG.
   void DeleteNode(const Bitset &subsplit);
   // Delete Edge from the DAG.
   void DeleteEdge(const size_t parent_id, const size_t child_id, bool rotated);
+  
   // Add edge between given parent and child nodes to the DAG.
   void ConnectGivenNodes(const size_t parent_id, const size_t child_id, bool rotated);
   // Add edge between node_id and
   void ConnectNodes(const SizeBitsetMap &index_to_child, size_t node_id, bool rotated);
-  //
+  // 
   void BuildNodes(const SizeBitsetMap &index_to_child, const BitsetVector &rootsplits);
   //
   void BuildNodesDepthFirst(const SizeBitsetMap &index_to_child, const Bitset &subsplit,
                             std::unordered_set<Bitset> &visited_subsplits);
-  //
+  // 
   void BuildEdges(const SizeBitsetMap &index_to_child);
   //
   void BuildDAGEdgesFromEdgeIndexer(BitsetSizeMap &edge_indexer);

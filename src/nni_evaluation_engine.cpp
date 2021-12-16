@@ -91,8 +91,8 @@ void NNIEvaluationEngine::SyncSetOfNNIsWithDAG() {
 
 void NNIEvaluationEngine::UpdateSetOfNNIsAfterDAGAddNodePair(
     const Bitset &parent_bitset, const Bitset &child_bitset) {
-  size_t parent_id = dag_->GetDAGNodeId(parent_bitset);
-  size_t child_id = dag_->GetDAGNodeId(child_bitset);
+  size_t parent_id = dag_->GetNodeId(parent_bitset);
+  size_t child_id = dag_->GetNodeId(child_bitset);
   // Every new edge added is a potential new NNI.
   // Iterate over the parent and child node of the new pair.
   for (const size_t &node_id : {parent_id, child_id}) {
@@ -152,8 +152,8 @@ void NNIEvaluationEngine::SafeAddOutputNNIsToSetOfNNIs(const Bitset &parent_bits
     // If DAG already contains output parent and child nodes, and an edge between them,
     // then don't add it to the adjacent_nnis.
     if (dag_->ContainsNode(new_nni.parent_) && dag_->ContainsNode(new_nni.child_)) {
-      const size_t parent_id = dag_->GetDAGNodeId(new_nni.parent_);
-      const size_t child_id = dag_->GetDAGNodeId(new_nni.child_);
+      const size_t parent_id = dag_->GetNodeId(new_nni.parent_);
+      const size_t child_id = dag_->GetNodeId(new_nni.child_);
       is_in_dag = dag_->ContainsEdge(parent_id, child_id);
     }
     if (is_in_dag == false) {

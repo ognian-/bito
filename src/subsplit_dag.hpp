@@ -498,14 +498,16 @@ class SubsplitDAG {
   // Expand dag_edges_ and parent_to_child_range_ with leaf subsplits at the end.
   void AddLeafSubsplitsToDAGEdgesAndParentToRange();
 
+  // ** Clade modifications and lookups
+
   // Add both of node's clades to the clade map.
   void AddNodeClades(const size_t node_id, const Bitset &node_subsplit);
   // Remove both of node's clades from the clade map.
   void RemoveNodeClades(const size_t node_id, const Bitset &node_subsplit); 
-  // Get all the child nodes of given node (specify left or right children). 
-  SizeVector& GetAllChildrenOfNode(const Bitset &node_subsplit, const bool which_children) const;
-  // 
-  SizeVector& GetAllParentsOfNode(const Bitset &node_subsplit) const;
+  // Get all the child nodes of given subsplit (specify left or right children). 
+  SizeVector GetAllChildrenOfNode(const Bitset &node_subsplit, const bool which_children) const;
+  // Get all parent nodes of a given subsplit.
+  SizeVector GetAllParentsOfNode(const Bitset &node_subsplit) const;
 
  protected:
   // NOTE: When using unique identifiers, for DAG nodes (aka Subsplits) we use the term

@@ -56,9 +56,8 @@ void SubsplitDAGGraft::AddGraftNodePair(const Bitset &parent_subsplit,
   if (!parent_is_new && !child_is_new) {
     return;
   }
-  // Iterate through dag nodes to find adjacent nodes.
+  // Find adjacent nodes.
 
-  // host_dag_->IterateOverRealNodes([](SubsplitDAGNode* node){});
 }
 
 void SubsplitDAGGraft::RemoveGraftNodePair(const Bitset &parent_subsplit,

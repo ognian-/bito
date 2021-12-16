@@ -591,9 +591,13 @@ SubsplitDAG::ProcessTopologyCounter(const Node::TopologyCounter &topology_counte
 }
 
 void SubsplitDAG::CreateAndInsertNode(const Bitset &node_subsplit) {
+  // Create node and assign it the highest possible id in the DAG.
   size_t node_id = NodeCount();
   dag_nodes_.push_back(std::make_unique<SubsplitDAGNode>(node_id, node_subsplit));
+  // Insert node into the 
   SafeInsert(subsplit_to_id_, node_subsplit, node_id);
+  // Insert node's clades into the clade map.
+  AddNodeClades(node_id, node_subsplit);
 }
 
 void SubsplitDAG::CreateAndInsertEdge(const size_t parent_id, const size_t child_id,
@@ -605,13 +609,15 @@ void SubsplitDAG::CreateAndInsertEdge(const size_t parent_id, const size_t child
   SafeInsert(dag_edges_, {parent_id, child_id}, EdgeCountWithLeafSubsplits());
 }
 
+// TODO:
 void SubsplitDAG::DeleteNode(const Bitset &node_subsplit) {
-  Assert(ContainsNode(node_subsplit),
-         "SubsplitDAG::DeleteNode(): Given edge does not exist");
-  size_t node_id = GetNodeId(node_subsplit);
-  // dag_nodes_.erase(node_id);
+  // Assert(ContainsNode(node_subsplit),
+  //        "SubsplitDAG::DeleteNode(): Given edge does not exist");
+  // size_t node_id = GetNodeId(node_subsplit);
+  // // dag_nodes_.erase(node_id);
 }
 
+// TODO:
 void SubsplitDAG::DeleteEdge(const size_t parent_id, const size_t child_id,
                              bool rotated) {
   auto edge = std::make_pair(parent_id, child_id);
@@ -619,6 +625,28 @@ void SubsplitDAG::DeleteEdge(const size_t parent_id, const size_t child_id,
          "SubsplitDAG::DeleteEdge(): Given edge does not exist.");
   // auto edge_idx = dag_edges_.at(edge);
   // dag_edges_.erase(edge);
+}
+
+// Sorts a positional index array [0,1,2,...] with respect to input data array.
+template <typename T>
+static SizeVector ArgSort(const std::vector<T> &data_vector,
+                          const std::function<int(T, T)> compare) {
+  std::vector<size_t> argsort_vector(data_vector.size());
+  std::iota(data_vector.begin(), data_vector.end(), 0);
+  std::sort(data_vector.begin(), data_vector.end(),
+            // Sort indices of sorted_index according to their index in input_array.
+            [&argsort_vector, &data_vector](int left, int right) {
+              return Compare(data_vector[left], data_vector[right]);
+            });
+  return argsort_vector;
+};
+
+// TODO:
+void SubsplitDAG::SortNodes() {
+  // Create argsorted vector by node's subsplits.
+  // This creates a map from (index:old_id -> value:new_id).
+  // Create new node vector and move nodes according to the argsort vector.
+  // Update node_ids in parent_to_child_range according the argsort vector.
 }
 
 void SubsplitDAG::ConnectGivenNodes(const size_t parent_id, const size_t child_id,
@@ -848,12 +876,14 @@ Bitset SubsplitDAG::BitsetTranslateViaTaxonTranslationMap(
   return translated_bitset;
 }
 
+// ** Contains
+
 bool SubsplitDAG::ContainsTaxon(const std::string &name) const {
   return dag_taxons_.find(name) != dag_taxons_.end();
 }
 
-bool SubsplitDAG::ContainsNode(const Bitset &subsplit) const {
-  return subsplit_to_id_.find(subsplit) != subsplit_to_id_.end();
+bool SubsplitDAG::ContainsNode(const Bitset &node_subsplit) const {
+  return subsplit_to_id_.find(node_subsplit) != subsplit_to_id_.end();
 }
 
 bool SubsplitDAG::ContainsNode(const size_t node_id) const {
@@ -863,6 +893,8 @@ bool SubsplitDAG::ContainsNode(const size_t node_id) const {
 bool SubsplitDAG::ContainsEdge(const size_t parent_id, const size_t child_id) const {
   return dag_edges_.find({parent_id, child_id}) != dag_edges_.end();
 }
+
+// ** Build Output Indexers/Vectors
 
 std::pair<SizeVector, SizeVector> SubsplitDAG::BuildParentIdVector(
     const Bitset &subsplit) const {
@@ -966,6 +998,8 @@ void SubsplitDAG::ConnectParentToAllParents(const Bitset &parent_subsplit,
     }
   }
 }
+
+// ** Modify DAG
 
 SubsplitDAG::ModificationResult SubsplitDAG::AddNodePair(const Bitset &parent_subsplit,
                                                          const Bitset &child_subsplit) {

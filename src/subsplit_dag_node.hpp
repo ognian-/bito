@@ -25,6 +25,16 @@ class SubsplitDAGNode {
   SubsplitDAGNode(size_t id, Bitset subsplit)
       : id_(id), subsplit_(std::move(subsplit)) {}
 
+  // Compare SubsplitDAGNode's by their ids.
+  static int Compare(const SubsplitDAGNode &node_a, const SubsplitDAGNode &node_b) {
+    return node_a.Id() - node_b.Id();
+  }
+  // Compare SubsplitDAGNode's by their subsplit representations.
+  static int CompareBySubsplit(const SubsplitDAGNode &node_a, const SubsplitDAGNode &node_b) {
+    return Bitset::SubsplitCompare(node_a.GetBitset(), node_b.GetBitset());
+  }
+
+  // Get Id
   size_t Id() const { return id_; }
   const Bitset &GetBitset() const { return subsplit_; }
   const Bitset GetBitset(bool rotated) const {

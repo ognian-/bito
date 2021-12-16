@@ -12,7 +12,8 @@
 #define SRC_SUBSPLIT_DAG_GRAFT_HPP
 
 class SubsplitDAGGraft {
- private: 
+
+ protected: 
   // DAG that the graft is proposed to be connected to.
   SubsplitDAG *host_dag_;
   // Nodes in the graft.
@@ -21,9 +22,12 @@ class SubsplitDAGGraft {
   std::map<SizePair, size_t> graft_edges_;
   // Nodes that are adjacent to a graft node (connect by edge).
   std::vector<size_t> graft_adjacent_dag_nodes_;
+  // - Map of all DAG Nodes:
+  //    - [ Node Subsplit (Bitset) => Node Id ]
+  BitsetSizeMap subsplit_to_id_; 
   // A map from a clade to the vector of node ids containing that clade.
   std::map<Bitset, SizeVector> clade_to_ids_;
-  
+
  public:
   // ** Constructors:
 
@@ -57,6 +61,20 @@ class SubsplitDAGGraft {
   // TODO:
   // Clear all nodes and edges from graft for reuse.
   void RemoveAllGrafts();
+  // TODO:
+  // 
+  void SortGraftNodes();
+
+  // ** Clades
+
+  // Add both of node's clades to the clade map.
+  void AddNodeClades(const size_t node_id, const Bitset &node_subsplit);
+  // Remove both of node's clades from the clade map.
+  void RemoveNodeClades(const size_t node_id, const Bitset &node_subsplit); 
+  // Get all the child nodes of given subsplit (specify left or right child). 
+  SizeVector GetAllChildrenOfNode(const Bitset &node_subsplit, const bool which_child) const;
+  // Get all parent nodes of a given subsplit (specify left or right child).
+  SizeVector GetAllParentsOfNode(const Bitset &node_subsplit, const bool which_child) const;
 
   // ** Getters
 
@@ -99,10 +117,11 @@ class SubsplitDAGGraft {
 
   // ** Contains
 
-  // 
-  bool ContainsNode(const Bitset subsplit) const;
-  // 
-  bool ContainsEdge(const Bitset edge) const;
+  // Checks whether the node is in the graft only.
+  bool ContainsGraftNode(const Bitset node_subsplit) const;
+  bool ContainsGraftNode(const size_t node_id) const;
+  // Checks whether the edge is in the graft only.
+  bool ContainsGraftEdge(const size_t parent_id, const size_t child_id) const;
 
   // ** Traversal
 

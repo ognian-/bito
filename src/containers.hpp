@@ -86,6 +86,10 @@ class SortedUniqueVector : public SortedVector {
   Insert(T value);
   // Insert value into vector without maintaining sort.
   void InsertNoSort(T value);
+  // Remove ith element from vector.
+  void Remove(size_t i);
+  // Get ith element from vector.
+  T Get(size_t i)
 };
 
 // TODO: Implement class that maintains a argsort vector/set on a data vector?
@@ -108,7 +112,7 @@ class ArgSortVector {};
 
 // This maintains a vector of pairs that are sorted by both pairs.
 template <typename T1, typename T2>
-class MultiSortVector {
+class TwoSortVector {
  private:
   // Sorts arg vector by data vector, using the specified data field.
   void ArgsortByField(std::vector<std::pair<T1, T2>> data,

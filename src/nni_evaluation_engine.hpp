@@ -21,12 +21,14 @@ class NNIEvaluationEngine {
 
   // ** Getter/Setters:
 
-  //
-  GPDAG *GetReferenceGPDAG() { return dag_; };
-  //
+  // Get Reference DAG.
+  GPDAG *GetReferenceGPDAG() const { return dag_; };
+  // Get Set of Adjacent NNIs to DAG.
   SetOfNNIs &GetAdjacentNNIs() { return adjacent_nnis_; };
-  //
-  size_t GetAdjacentNNICount() { return adjacent_nnis_.GetSize(); };
+  // Get Number of Adjacent NNIs.
+  size_t GetAdjacentNNICount() const { return adjacent_nnis_.GetSize(); };
+  // Get ith element of Set.
+  NNIOperation GetNNIFromAdjacentNNIs(size_t i) const;
 
   // ** Runner Methods:
   // These start the engine, which procedurally ranks and adds (and

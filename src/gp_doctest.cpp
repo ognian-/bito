@@ -686,22 +686,22 @@ TEST_CASE("GPInstance: AddNodePair tests") {
   const auto child_node = dag.GetDAGNode(dag.GetNodeId(child_subsplit));
   std::map<bool, SizeVector> correct_parents_of_parent{{true, {}}, {false, {16, 14}}};
   std::map<bool, SizeVector> parents_of_parent{
-      {true, parent_node->GetRootwardLeftward()},
-      {false, parent_node->GetRootwardRightward()}};
+      {true, parent_node->GetRootwardLeftside()},
+      {false, parent_node->GetRootwardRightside()}};
   CHECK_EQ(parents_of_parent, correct_parents_of_parent);
   std::map<bool, SizeVector> children_of_parent{
-      {true, parent_node->GetLeafwardLeftward()},
-      {false, parent_node->GetLeafwardRightward()}};
+      {true, parent_node->GetLeafwardLeftside()},
+      {false, parent_node->GetLeafwardRightside()}};
   std::map<bool, SizeVector> correct_children_of_parent{{true, {12}}, {false, {3}}};
   CHECK_EQ(children_of_parent, correct_children_of_parent);
   std::map<bool, SizeVector> parents_of_children{
-      {true, child_node->GetRootwardLeftward()},
-      {false, child_node->GetRootwardRightward()}};
+      {true, child_node->GetRootwardLeftside()},
+      {false, child_node->GetRootwardRightside()}};
   std::map<bool, SizeVector> correct_parents_of_children{{true, {13}}, {false, {}}};
   CHECK_EQ(parents_of_children, correct_parents_of_children);
   std::map<bool, SizeVector> children_of_child{
-      {true, child_node->GetLeafwardLeftward()},
-      {false, child_node->GetLeafwardRightward()}};
+      {true, child_node->GetLeafwardLeftside()},
+      {false, child_node->GetLeafwardRightside()}};
   std::map<bool, SizeVector> correct_children_of_child{{true, {2}}, {false, {4}}};
   CHECK_EQ(children_of_child, correct_children_of_child);
   // Check that node_reindexer and edge_reindexer are correct.
@@ -721,8 +721,8 @@ TEST_CASE("GPInstance: AddNodePair tests") {
   const auto& node_14 = dag.GetDAGNode(14);
   CHECK_EQ(node_14->GetBitset().ToString(), "0100000111");
   // Check that node fields were updated correctly.
-  const auto& sorted_parents_14 = node_14->GetRootwardRightward();
-  const auto& sorted_children_14 = node_14->GetLeafwardRightward();
+  const auto& sorted_parents_14 = node_14->GetRootwardRightside();
+  const auto& sorted_children_14 = node_14->GetLeafwardRightside();
   CHECK(std::find(sorted_parents_14.begin(), sorted_parents_14.end(), 13) ==
         sorted_parents_14.end());
   CHECK(std::find(sorted_parents_14.begin(), sorted_parents_14.end(), 15) !=
@@ -793,6 +793,7 @@ TEST_CASE("GPInstance: Only add child node tests") {
 
 // This test builds a DAG, tests if engine generates the same set of adjacent NNI's and
 // manually created set. Then adds a node pair to DAG, and tests if engine updates
+// correctly.
 TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
   // Simple DAG that contains a shared edge, internal leafward fork, and an internal
   // rootward fork.
@@ -887,8 +888,22 @@ TEST_CASE("NNIEvaluationEngine: Adjacent NNI Maintainence") {
   CHECK_EQ(nni_engine_2.GetAdjacentNNIs(), correct_adjacent_nnis);
 }
 
-TEST_CASE("NNI Engine: Simplest Evaluation Test")
-{
+// This test builds several SubsplitDAGs: dag_A_1, dag_A_2, dag_A_2b, and dag_B.
+//    - dag_B contains the all the subsplit pairs in all dag_A variants.
+//    - dag_A_1 and dag_A_2 contain all the same subsplit nodes except two subsplits
+//    from each dag, which are NNIs of one another.
+//    - dag_A_2 and dag_A_2b contain all the same subsplit nodes, but have two different
+//    taxon mappings, due to the order of subsplit insertion, which is based on the
+//    ordering of taxons in the Newick tree file.
+// - Tests: Checks DAGs for the DAG equivalency and PerGPCSP_Likelihood equivalency.
+//    - dag_A_1 is tested for self equivalence.
+//    - dag_A_1 and dag_A_2 are test for NONequivalence.
+//    - dag_A_2 and dag_A_2b are tested for equivalence.
+//    - dag_A_1 and dag_B are tested for NONequivalence before adding pair_1 to dag_A_1.
+//    - dag_A_1 and dag_B are tested for equivalence after adding pair_1 to dag_A_1.
+//    - dag_A_2 and dag_B are tested for equivalence after adding pair_2 to dag_A_2.
+//    - dag_A_2b and dag_B are tested for equivalence after adding pair_2 to dag_A_2b.
+TEST_CASE("NNI Engine: AddNodePair Equivalence Test") {
   // Fasta contains simple sequences for four taxon: x0,x1,x2,x3.
   const std::string fasta_path = "data/four_taxon.fasta";
 
@@ -897,228 +912,291 @@ TEST_CASE("NNI Engine: Simplest Evaluation Test")
     std::cout << "INFO: " << header << std::endl;
     GPDAG& dag = inst.GetDAG();
     RootedTreeCollection trees = inst.CurrentlyLoadedTreesWithGPBranchLengths();
-//     // taxons
-//     std::cout << "taxon_names: " << inst.GetTaxonNames() << std::endl;
-//     std::cout << "taxon_map: [ ";
-//     for (const auto& [tag, name] : trees.TagTaxonMap()) {
-//       std::cout << "( " << UnpackFirstInt(tag) << "," << UnpackSecondInt(tag) << ": "
-//                 << name << " ), ";
-//     }
-//     std::cout << " ]" << std::endl;
-//     // number of topologies
-//     std::cout << "number_of_topologies: " << dag.TopologyCount() << std::endl;
-//     // node subsplits
-//     std::cout << "nodes: [ ";
-//     for (const auto& node : dag.GetSortedVectorOfNodeBitsets()) {
-//       std::cout << node.SubsplitToString() << " ";
-//     }
-//     std::cout << "]" << std::endl;
-//     // edge gpcsps
-//     std::cout << "edges: [ ";
-//     for (const auto& edge : dag.GetSortedVectorOfEdgeBitsets()) {
-//       std::cout << edge.PCSPToString() << " ";
-//     }
-//     std::cout << "]" << std::endl;
-//     // trees
-//     std::cout << "trees: [ " << std::endl;
-//     std::cout << trees.Newick();
-//     std::cout << "]" << std::endl;
-//     // trees
-//     // std::cout << "tree_by_id [ " << std::endl;
-//     // for (RootedTree tree : trees.trees_) {
-//     //   std::cout << tree.Newick() << std::endl;
-//     // }
-//     // std::cout << "]" << std::endl;
-//     // taxons
-//     std::cout << "taxons: " << dag.TaxonCount() << ", " << dag.GetTaxonMap()
-//               << std::endl;
-//     std::cout << "- - -" << std::endl;
-//   };
+    // taxons
+    std::cout << "taxon_names: " << inst.GetTaxonNames() << std::endl;
+    std::cout << "taxon_map: [ ";
+    for (const auto& [tag, name] : trees.TagTaxonMap()) {
+      std::cout << "( " << UnpackFirstInt(tag) << "," << UnpackSecondInt(tag) << ": "
+                << name << " ), ";
+    }
+    std::cout << " ]" << std::endl;
+    // number of topologies
+    std::cout << "number_of_topologies: " << dag.TopologyCount() << std::endl;
+    // node subsplits
+    std::cout << "nodes: [ ";
+    for (const auto& node : dag.GetSortedVectorOfNodeBitsets()) {
+      std::cout << node.SubsplitToString() << " ";
+    }
+    std::cout << "]" << std::endl;
+    // edge gpcsps
+    std::cout << "edges: [ ";
+    for (const auto& edge : dag.GetSortedVectorOfEdgeBitsets()) {
+      std::cout << edge.EdgeToString() << " ";
+    }
+    std::cout << "]" << std::endl;
+    // trees
+    std::cout << "trees: [ " << std::endl;
+    std::cout << trees.Newick();
+    std::cout << "]" << std::endl;
+    // output trees
+    // std::cout << "tree_by_id [ " << std::endl;
+    // for (RootedTree tree : trees.trees_) {
+    //   std::cout << tree.Newick() << std::endl;
+    // }
+    // std::cout << "]" << std::endl;
+    // taxons
+    std::cout << "taxons: " << dag.TaxonCount() << ", " << dag.GetTaxonMap()
+              << std::endl;
+    std::cout << "- - -" << std::endl;
+  };
 
-//   // dag_A is a SubsplitDAG created from a single simple tree topology.
-//   auto inst_A = GPInstanceOfFiles(fasta_path,
-//   "data/four_taxon_simple_before_nni_1.nwk",
-//                                   "_ignore/mmapped_plv_A.data");
-//   GPDAG& dag_A = inst_A.GetDAG();
+  // dag_A is a SubsplitDAG created from a single simple tree topology.
+  auto inst_A = GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_1.nwk",
+                                  "_ignore/mmapped_plv_A.data");
+  GPDAG& dag_A = inst_A.GetDAG();
 
-//   // dag_A_1 is a SubsplitDAG created from a single simple tree topology that
-//   contains
-//   // pair_1.
-//   auto inst_A_1 =
-//       GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_1.nwk",
-//                         "_ignore/mmapped_plv_A_1.data");
-//   GPDAG& dag_A_1 = inst_A_1.GetDAG();
-//   PrintInfo("dag_A_1", inst_A_1);
+  // dag_A_1 is a SubsplitDAG created from a single simple tree topology that
+  // contains pair_1.
+  auto inst_A_1 =
+      GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_1.nwk",
+                        "_ignore/mmapped_plv_A_1.data");
+  GPDAG& dag_A_1 = inst_A_1.GetDAG();
+  PrintInfo("dag_A_1", inst_A_1);
+  std::cout << std::endl;
 
-//   // dag_A_2 is a SubsplitDAG created from a single simple tree topology that
-//   contains
-//   // pair_2.
-//   auto inst_A_2 =
-//       GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_2.nwk",
-//                         "_ignore/mmapped_plv_A_2.data");
-//   GPDAG& dag_A_2 = inst_A_2.GetDAG();
-//   PrintInfo("dag_A_2", inst_A_2);
+  // dag_A_2 is a SubsplitDAG created from a single simple tree topology that
+  // contains pair_2.
+  auto inst_A_2 =
+      GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_2.nwk",
+                        "_ignore/mmapped_plv_A_2.data");
+  GPDAG& dag_A_2 = inst_A_2.GetDAG();
+  PrintInfo("dag_A_2", inst_A_2);
 
-//   // dag_A_2b is a SubsplitDAG created from a single simple tree topology that
-//   contains
-//   // pair_2.
-//   auto inst_A_2b =
-//       GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_2b.nwk",
-//                         "_ignore/mmapped_plv_A_2.data");
-//   GPDAG& dag_A_2b = inst_A_2b.GetDAG();
-//   PrintInfo("dag_A_2b", inst_A_2b);
+  // dag_A_2b is a SubsplitDAG created from a single simple tree topology that
+  // contains pair_2.
+  auto inst_A_2b =
+      GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_before_nni_2b.nwk",
+                        "_ignore/mmapped_plv_A_2.data");
+  GPDAG& dag_A_2b = inst_A_2b.GetDAG();
+  PrintInfo("dag_A_2b", inst_A_2b);
 
-//   // dag_B is a SubsplitDAG created from two tree topologies: dag_A_1 and dag_A_2.
-//   This
-//   // should be equivalent to the result of dag_A_1 after adding node pair_2.
-//   auto inst_B = GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_after_nni.nwk",
-//                                   "_ignore/mmapped_plv_B.data");
-//   GPDAG& dag_B = inst_B.GetDAG();
-//   std::cout << "dag_B: " << std::endl;
-//   PrintInfo("dag_B", inst_B);
+  // dag_B is a SubsplitDAG created from two tree topologies: dag_A_1 and dag_A_2.
+  // This should be equivalent to the result of dag_A_1 after adding node pair_2.
+  auto inst_B = GPInstanceOfFiles(fasta_path, "data/four_taxon_simple_after_nni.nwk",
+                                  "_ignore/mmapped_plv_B.data");
+  GPDAG& dag_B = inst_B.GetDAG();
+  std::cout << "dag_B: " << std::endl;
+  PrintInfo("dag_B", inst_B);
 
-//   // pair_1: NNI pair missing from dag_A_1.
-//   std::pair<Bitset, Bitset> pair_1 = std::make_pair(Bitset::Subsplit("0110", "0001"),
-//                                                     Bitset::Subsplit("0100",
-//                                                     "0010"));
-//   // pair_1: NNI pair missing from dag_A_2.
-//   std::pair<Bitset, Bitset> pair_2 = std::make_pair(Bitset::Subsplit("0110", "0001"),
-//                                                     Bitset::Subsplit("0100",
-//                                                     "0010"));
-//   // pair_2: NNI pair missing from dag_A_2B.
-//   std::pair<Bitset, Bitset> pair_2b = std::make_pair(Bitset::Subsplit("0100",
-//   "0011"),
-//                                                      Bitset::Subsplit("0010",
-//                                                      "0001"));
+  // pair_1: NNI pair missing from dag_A_1.
+  std::pair<Bitset, Bitset> pair_1 =
+      std::make_pair(Bitset::Subsplit("0110", "0001"),   // 12|3
+                     Bitset::Subsplit("0100", "0010"));  //  1|2
+  // pair_1: NNI pair missing from dag_A_2.
+  std::pair<Bitset, Bitset> pair_2 =
+      std::make_pair(Bitset::Subsplit("0110", "0001"),   // 12|3
+                     Bitset::Subsplit("0100", "0010"));  //  1|2
+  // pair_2: NNI pair missing from dag_A_2B.
+  std::pair<Bitset, Bitset> pair_2b =
+      std::make_pair(Bitset::Subsplit("0100", "0011"),   //  1|23
+                     Bitset::Subsplit("0010", "0001"));  //  2|3
+  // These maps assure taxon ids of each DAG map to the correct subsplit ids.
+  // Translation map: dag_A_1 -> dag_B.
+  auto taxon_map_1 = SubsplitDAG::BuildTaxonTranslationMap(dag_A_1, dag_B);
+  // Translation map: dag_A_2 -> dag_B.
+  auto taxon_map_2 = SubsplitDAG::BuildTaxonTranslationMap(dag_A_2, dag_B);
+  // Translation map: dag_A_2 -> dag_B.
+  auto taxon_map_2b = SubsplitDAG::BuildTaxonTranslationMap(dag_A_2b, dag_B);
 
-//   auto taxon_map_1 = SubsplitDAG::BuildTaxonTranslationMap(dag_A_1, dag_B);
-//   auto taxon_map_2 = SubsplitDAG::BuildTaxonTranslationMap(dag_A_2, dag_B);
-//   auto taxon_map_2b = SubsplitDAG::BuildTaxonTranslationMap(dag_A_2b, dag_B);
+  // Transform subsplits according to Translation map.
+  auto TranslateBitsetVector = [](std::vector<Bitset>& node_vec, SizeVector& taxon_map,
+                                  bool forward_translate) {
+    for (size_t i = 0; i < node_vec.size(); i++) {
+      Bitset node = node_vec[i];
+      node = SubsplitDAG::BitsetTranslateViaTaxonTranslationMap(node, taxon_map,
+                                                                forward_translate);
+      node = node.SubsplitSort();
+      node_vec[i] = node;
+    }
+    return node_vec;
+  };
+  // Find all elements in vec_a, but not in vec_b.
+  auto VectorDiff = [](std::vector<Bitset>& vec_a, std::vector<Bitset>& vec_b) {
+    auto a_not_b = std::vector<Bitset>();
+    for (const auto& a : vec_a) {
+      bool is_found = false;
+      for (const auto& b : vec_b) {
+        if (a == b) {
+          is_found = true;
+          break;
+        }
+      }
+      if (is_found == false) {
+        a_not_b.push_back(a);
+      }
+    }
+    return a_not_b;
+  };
+  // Get all subsplits only in one DAG, but not both DAGs.
+  auto FindMissingNodes = [VectorDiff, TranslateBitsetVector](std::string header,
+                                                              SubsplitDAG& dag_in,
+                                                              SubsplitDAG& dag_out) {
+    std::cout << header << std::endl;
+    auto taxon_map = SubsplitDAG::BuildTaxonTranslationMap(dag_in, dag_out);
+    auto missing = std::vector<bool>();
+    auto nodes_a = dag_in.GetSortedVectorOfNodeBitsets();
+    std::cout << "TAXON_MAP: " << taxon_map << std::endl;
+    std::cout << "dag_in (IN): " << std::endl << nodes_a << std::endl;
+    nodes_a = TranslateBitsetVector(nodes_a, taxon_map, true);
+    std::cout << "dag_in (OUT): " << std::endl << nodes_a << std::endl;
+    std::sort(nodes_a.begin(), nodes_a.end());
+    std::cout << "dag_in (SORTED): " << std::endl << nodes_a << std::endl;
+    auto nodes_b = dag_out.GetSortedVectorOfNodeBitsets();
+    std::cout << "dag_out: " << std::endl << nodes_b << std::endl;
+    auto a_not_b = VectorDiff(nodes_a, nodes_b);
+    auto b_not_a = VectorDiff(nodes_b, nodes_a);
+    std::cout << "missing_from_dag_out (PRE): " << a_not_b << std::endl;
+    std::cout << "missing_from_dag_in (PRE): " << b_not_a << std::endl;
+    a_not_b = TranslateBitsetVector(a_not_b, taxon_map, false);
+    b_not_a = TranslateBitsetVector(b_not_a, taxon_map, false);
+    std::cout << "missing_from_dag_out (POST): " << a_not_b << std::endl;
+    std::cout << "missing_from_dag_in (POST): " << b_not_a << std::endl;
+    std::cout << "- - -" << std::endl;
+    return missing;
+  };
 
-//   auto TranslateBitsetVector = [](std::vector<Bitset>& node_vec, SizeVector&
-//   taxon_map,
-//                                   bool forward_translate) {
-//     for (size_t i = 0; i < node_vec.size(); i++) {
-//       Bitset node = node_vec[i];
-//       node = SubsplitDAG::BitsetTranslateViaTaxonTranslationMap(node, taxon_map,
-//                                                                 forward_translate);
-//       node = node.SubsplitSort();
-//       node_vec[i] = node;
-//     }
-//     return node_vec;
-//   };
+  // TODO: These compare tests belong in their own unit tests.
+  std::cout << "Compare(A_1,A_1): " << SubsplitDAG::Compare(dag_A_1, dag_A_1)
+            << std::endl;
+  CHECK(SubsplitDAG::Compare(dag_A_1, dag_A_1) == 0);
+  std::cout << "Compare(A_2,A_2b): " << SubsplitDAG::Compare(dag_A_2, dag_A_2b)
+            << std::endl;
+  CHECK(SubsplitDAG::Compare(dag_A_2, dag_A_2b) == 0);
+  std::cout << "Compare(A_1,A_2): " << SubsplitDAG::Compare(dag_A_1, dag_A_2)
+            << std::endl;
+  CHECK(SubsplitDAG::Compare(dag_A_1, dag_A_2) != 0);
 
-//   auto VectorDiff = [](std::vector<Bitset>& vec_a, std::vector<Bitset>& vec_b) {
-//     auto a_not_b = std::vector<Bitset>();
-//     for (const auto& a : vec_a) {
-//       bool is_found = false;
-//       for (const auto& b : vec_b) {
-//         if (a == b) {
-//           is_found = true;
-//           break;
-//         }
-//       }
-//       if (is_found == false) {
-//         a_not_b.push_back(a);
-//       }
-//     }
-//     return a_not_b;
-//   };
+  // Compute Per-GPCSP Likelihoods for each DAG:
+  auto CalcLikelihoodVia_PerGPCSP = [](std::string header, GPInstance& inst,
+                                       GPDAG& dag) {
+    std::cout << header << std::endl;
+    inst.EstimateBranchLengths(1e-6, 10, true);
+    inst.PopulatePLVs();
+    inst.ComputeLikelihoods();
+    const EigenVectorXd log_likelihoods = inst.GetEngine()->GetPerGPCSPLogLikelihoods();
+    std::cout << log_likelihoods << std::endl;
+    return log_likelihoods;
+  };
 
-//   auto FindMissingNodes = [VectorDiff, TranslateBitsetVector](std::string header,
-//                                                               SubsplitDAG& dag_in,
-//                                                               SubsplitDAG& dag_out) {
-//     std::cout << header << std::endl;
-//     auto taxon_map = SubsplitDAG::BuildTaxonTranslationMap(dag_in, dag_out);
-//     auto missing = std::vector<bool>();
-//     auto nodes_a = dag_in.GetSortedVectorOfNodeBitsets();
-//     std::cout << "TAXON_MAP: " << taxon_map << std::endl;
-//     std::cout << "dag_in (IN): " << std::endl << nodes_a << std::endl;
-//     nodes_a = TranslateBitsetVector(nodes_a, taxon_map, true);
-//     std::cout << "dag_in (OUT): " << std::endl << nodes_a << std::endl;
-//     std::sort(nodes_a.begin(), nodes_a.end());
-//     std::cout << "dag_in (SORTED): " << std::endl << nodes_a << std::endl;
-//     auto nodes_b = dag_out.GetSortedVectorOfNodeBitsets();
-//     std::cout << "dag_out: " << std::endl << nodes_b << std::endl;
-//     auto a_not_b = VectorDiff(nodes_a, nodes_b);
-//     a_not_b = TranslateBitsetVector(a_not_b, taxon_map, false);
-//     auto b_not_a = VectorDiff(nodes_b, nodes_a);
-//     b_not_a = TranslateBitsetVector(b_not_a, taxon_map, false);
-//     std::cout << "missing_from_dag_out: " << a_not_b << std::endl;
-//     std::cout << "missing_from_dag_in: " << b_not_a << std::endl;
-//     std::cout << "- - -" << std::endl;
-//     return missing;
-//   };
+  CalcLikelihoodVia_PerGPCSP("PerGPCSP Likelihoods for dag_A_1: ", inst_A_1, dag_A_1);
+  CalcLikelihoodVia_PerGPCSP("PerGPCSP Likelihoods for dag_A_2: ", inst_A_2, dag_A_2);
+  CalcLikelihoodVia_PerGPCSP("PerGPCSP Likelihoods for dag_B: ", inst_B, dag_B);
 
-//   // FindMissingNodes("Missing Nodes (A_1->B): ", dag_A_1,dag_B);
-//   // FindMissingNodes("Missing Nodes (A_2->B): ", dag_A_2,dag_B);
-//   // FindMissingNodes("Missing Nodes (A_2b->B): ", dag_A_2b,dag_B);
+  // Compute Quartet Marginals for each DAG:
+  // auto CalcLikelihoodVia_QuartetHybrid =
+  //   [](std::string header, GPInstance &inst, GPDAG &dag, size_t parent_id, size_t
+  //   child_id) {
+  //     std::cout << header << std::endl;
+  //     auto request = dag.QuartetHybridRequestOf(parent_id,
+  //     Bitset::SubsplitIsChildOf(), child_id); EigenVectorXd
+  // quartet_log_likelihoods =
+  //         inst.GetEngine()->CalculateQuartetHybridLikelihoods(request);
+  //     std::cout << quartet_log_likelihoods << std::endl;
+  //   };
 
-//   // TODO: These compare tests belong in their own unit tests.
-//   std::cout << "Compare(A_1,A_1): " << SubsplitDAG::Compare(dag_A_1, dag_A_1)
-//             << std::endl;
-//   CHECK(SubsplitDAG::Compare(dag_A_1, dag_A_1) == 0);
-//   std::cout << "Compare(A_2,A_2b): " << SubsplitDAG::Compare(dag_A_2, dag_A_2b)
-//             << std::endl;
-//   CHECK(SubsplitDAG::Compare(dag_A_2, dag_A_2b) == 0);
-//   std::cout << "Compare(A_1,A_2b): " << SubsplitDAG::Compare(dag_A_1, dag_A_2)
-//             << std::endl;
-//   CHECK(SubsplitDAG::Compare(dag_A_1, dag_A_2) != 0);
+  // CalcLikelihoodVia_QuartetHybrid("Quartet Marginals for dag_A_1", inst_A_1,
+  // dag_A_1);
 
-//   // Compute Per-GPCSP Likelihoods for each DAG:
-//   auto CalcLikelihoodVia_PerGPCSP = [](std::string header, GPInstance& inst,
-//                                        GPDAG& dag) {
-//     std::cout << header << std::endl;
-//     inst.EstimateBranchLengths(1e-6, 10, true);
-//     inst.PopulatePLVs();
-//     inst.ComputeLikelihoods();
-//     const EigenVectorXd log_likelihoods =
-//     inst.GetEngine()->GetPerGPCSPLogLikelihoods(); std::cout << log_likelihoods <<
-//     std::endl; return log_likelihoods;
-//   };
+  // Add missing NNIs.
+  std::cout << "ADD_NODEPAIR [begin]" << std::endl;
+  std::cout << "ADD_NODEPAIR dag_A_1:" << std::endl;
+  dag_A_1.AddNodePair(pair_1.first, pair_1.second);
+  std::cout << "ADD_NODEPAIR dag_A_2:" << std::endl;
+  dag_A_2.AddNodePair(pair_2.first, pair_2.second);
+  std::cout << "ADD_NODEPAIR dag_A_2b:" << std::endl;
+  dag_A_2b.AddNodePair(pair_2b.first, pair_2b.second);
+  std::cout << "ADD_NODEPAIR [end]" << std::endl;
 
-//   CalcLikelihoodVia_PerGPCSP("PerGPCSP Likelihoods for dag_A_1: ", inst_A_1,
-//   dag_A_1); CalcLikelihoodVia_PerGPCSP("PerGPCSP Likelihoods for dag_A_2: ",
-//   inst_A_2, dag_A_2); CalcLikelihoodVia_PerGPCSP("PerGPCSP Likelihoods for dag_B: ",
-//   inst_B, dag_B);
+  std::cout << "Compare(A_1,B): " << SubsplitDAG::Compare(dag_A_1, dag_B) << std::endl;
+  CHECK(SubsplitDAG::Compare(dag_A_1, dag_B) == 0);
+  std::cout << "Compare(A_2,B): " << SubsplitDAG::Compare(dag_A_2, dag_B) << std::endl;
+  CHECK(SubsplitDAG::Compare(dag_A_2, dag_B) == 0);
+  std::cout << "Compare(A_2b,B): " << SubsplitDAG::Compare(dag_A_2b, dag_B)
+            << std::endl;
+  CHECK(SubsplitDAG::Compare(dag_A_2b, dag_B) == 0);
 
-//   // Compute Quartet Marginals for each DAG:
-//   // auto CalcLikelihoodVia_QuartetHybrid =
-//   //   [](std::string header, GPInstance &inst, GPDAG &dag, size_t parent_id, size_t
-//   //   child_id) {
-//   //     std::cout << header << std::endl;
-//   //     auto request = dag.QuartetHybridRequestOf(parent_id,
-//   //     Bitset::SubsplitIsChildOf(), child_id); EigenVectorXd
-//   quartet_log_likelihoods =
-//   //         inst.GetEngine()->CalculateQuartetHybridLikelihoods(request);
-//   //     std::cout << quartet_log_likelihoods << std::endl;
-//   //   };
+  // Remove extra NNI from dag_B to make dag_A_1.
+  // std::cout << "REMOVE_NODEPAIR dag_B -> dag_A_1:" << std::endl;
+  // dag_B.RemoveNodePair(pair_1.first, pair_1.second);
 
-//   // CalcLikelihoodVia_QuartetHybrid("Quartet Marginals for dag_A_1", inst_A_1,
-//   // dag_A_1);
-
-//   // Add missing NNI.
-//   dag_A_1.AddNodePair(pair_1.first, pair_1.second);
-//   dag_A_2.AddNodePair(pair_2.first, pair_2.second);
-//   dag_A_2b.AddNodePair(pair_2b.first, pair_2b.second);
-
-//   std::cout << "Compare(A_1,B): " << SubsplitDAG::Compare(dag_A_1, dag_B) <<
-//   std::endl; CHECK(SubsplitDAG::Compare(dag_A_1, dag_B) == 0); std::cout <<
-//   "Compare(A_2,B): " << SubsplitDAG::Compare(dag_A_2, dag_B) << std::endl;
-//   CHECK(SubsplitDAG::Compare(dag_A_2, dag_B) == 0);
-//   std::cout << "Compare(A_2b,B): " << SubsplitDAG::Compare(dag_A_2b, dag_B)
-//             << std::endl;
-//   CHECK(SubsplitDAG::Compare(dag_A_2b, dag_B) == 0);
-
-//   // Remove extra NNI from dag_B.
-//   // dag_B.RemoveNodePair(Bitset::Subsplit("0010", "0101"),
-//   //                      Bitset::Subsplit("0001", "0100"));
-
-//   // CHECK(SubsplitDAG::Compare(dag_A, dag_B) == 0);
+  // CHECK(SubsplitDAG::Compare(dag_A, dag_B) == 0);
 }
 
+// This test compares if SubsplitDAGGraft is equivalent to SubsplitDAG
+TEST_CASE("SubsplitDAGGraft: AddNodePair Equivalence Test") {
+  // Simple DAG that contains a shared edge, internal leafward fork, and an internal
+  // rootward fork.
+  const std::string fasta_path = "data/six_taxon.fasta";
+  const std::string newick_path = "data/six_taxon_rooted_simple.nwk";
+  // Instance that will be unaltered.
+  auto pre_inst = GPInstanceOfFiles(fasta_path, newick_path);
+  GPDAG& pre_dag = pre_inst.GetDAG();
+  SubsplitDAG& pre_dag_as_subsplitdag = pre_inst.GetDAG();
+  // Instance that will be altered.
+  auto inst = GPInstanceOfFiles(fasta_path, newick_path);
+  GPDAG& dag = inst.GetDAG();
+  SubsplitDAG& dag_as_subsplitdag = inst.GetDAG();
+  SubsplitDAGGraft graft_dag = SubsplitDAGGraft(dag);
 
-TEST_CASE("SubsplitDAGGraft")
-{
+  // Find all viable NNIs for DAG.
+  auto nni_engine = NNIEvaluationEngine(dag);
+  nni_engine.SyncSetOfNNIsWithDAG();
+  size_t nni_count = nni_engine.GetAdjacentNNICount();
+  // Select an NNI to add to DAG.
+  auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(0);
+  std::cout << "NNI_TO_ADD: " << nni_to_add.parent_ << "," << nni_to_add.child_ << std::endl;
 
+  std::cout << "NODE_COUNTS: " << pre_dag.NodeCount() << "," << graft_dag.NodeCount() << std::endl;
+  std::cout << "EDGE_COUNTS: " << pre_dag.EdgeCountWithLeafSubsplits() << "," << graft_dag.EdgeCount() << std::endl;
+  CHECK_MESSAGE( SubsplitDAGGraft::CompareToSubsplitDAG(graft_dag, pre_dag_as_subsplitdag) == 0, "DAG_GRAFT not equal to DAG before AddNodePair.");
+
+  dag.AddNodePair(nni_to_add.parent_, nni_to_add.child_);
+  graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
+  std::cout << "NODE_COUNTS: " << dag.NodeCount() << "," << graft_dag.NodeCount() << std::endl;
+  std::cout << "EDGE_COUNTS: " << dag.EdgeCountWithLeafSubsplits() << "," << graft_dag.EdgeCount() << std::endl;
+  // CHECK_MESSAGE( SubsplitDAGGraft::Compare(graft_dag, dag_as_subsplitdag) == 0, "DAG_GRAFT not equal to DAG after AddNodePair.");
+
+  graft_dag.RemoveAllGrafts();
+  std::cout << "NODE_COUNTS: " << pre_dag.NodeCount() << "," << graft_dag.NodeCount() << std::endl;
+  std::cout << "EDGE_COUNTS: " << pre_dag.EdgeCountWithLeafSubsplits() << "," << graft_dag.EdgeCount() << std::endl;
+  // CHECK_MESSAGE( SubsplitDAGGraft::Compare(graft_dag, pre_dag_as_subsplitdag) == 0, "DAG_GRAFT not equal to DAG after RemoveAllGrafts.");
 }
+
+// Check that Grafted SubsplitDAG
+TEST_CASE("SubsplitDAGGraft: PerPCSP Likelihood Test.") {
+  // Simple DAG that contains a shared edge, internal leafward fork, and an internal
+  // rootward fork.
+  const std::string fasta_path = "data/six_taxon.fasta";
+  const std::string newick_path = "data/six_taxon_rooted_simple.nwk";
+  // Instance that will be unaltered.
+  auto pre_inst = GPInstanceOfFiles(fasta_path, newick_path);
+  GPDAG& pre_dag = pre_inst.GetDAG();
+  SubsplitDAG& pre_dag_as_subsplitdag = pre_inst.GetDAG();
+  // Instance that will be altered.
+  auto inst = GPInstanceOfFiles(fasta_path, newick_path);
+  GPDAG& dag = inst.GetDAG();
+  SubsplitDAG& dag_as_subsplitdag = inst.GetDAG();
+  SubsplitDAGGraft graft_dag = SubsplitDAGGraft(dag);
+
+  // Find all viable NNIs for DAG.
+  auto nni_engine = NNIEvaluationEngine(dag);
+  nni_engine.SyncSetOfNNIsWithDAG();
+  size_t nni_count = nni_engine.GetAdjacentNNICount();
+  // Select an NNI to add to DAG.
+  auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(0);
+
+  
+}
+
+// Build SubsplitDAG instance and procedurally add random NNIs.
+TEST_CASE("SubsplitDAG NNI Speed Test") {}

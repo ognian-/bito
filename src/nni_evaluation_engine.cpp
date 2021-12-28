@@ -17,7 +17,13 @@ NNIEvaluationEngine::NNIEvaluationEngine(GPDAG &dag_src) {
   ranked_nnis_ = RankedSetOfNNIs();
 }
 
-// ** Runner Methods
+// ** Getters/Setters:
+
+NNIOperation NNIEvaluationEngine::GetNNIFromAdjacentNNIs(size_t i) const {
+  return adjacent_nnis_.At(i);
+}
+
+// ** Runner Methods:
 
 // TODO:
 void NNIEvaluationEngine::Runner() {

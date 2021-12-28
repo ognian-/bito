@@ -7,24 +7,24 @@
 // NOTE: This may add overhead to DAG traversals.
 
 #include "subsplit_dag.hpp"
+#include "gp_dag.hpp"
 
 #ifndef SRC_SUBSPLIT_DAG_GRAFT_HPP
 #define SRC_SUBSPLIT_DAG_GRAFT_HPP
 
 class SubsplitDAGGraft {
-
- protected: 
+ protected:
   // DAG that the graft is proposed to be connected to.
   SubsplitDAG *host_dag_;
   // Nodes in the graft.
   std::vector<std::unique_ptr<SubsplitDAGNode>> graft_nodes_;
   // Edges in the graft.
   std::map<SizePair, size_t> graft_edges_;
-  // Nodes that are adjacent to a graft node (connect by edge).
-  std::vector<size_t> graft_adjacent_dag_nodes_;
+  // Ids of nodes that are adjacent to a graft node (connect by edge).
+  std::vector<size_t> bridge_nodes_;
   // - Map of all DAG Nodes:
   //    - [ Node Subsplit (Bitset) => Node Id ]
-  BitsetSizeMap subsplit_to_id_; 
+  BitsetSizeMap subsplit_to_id_;
   // A map from a clade to the vector of node ids containing that clade.
   std::map<Bitset, SizeVector> clade_to_ids_;
 
@@ -39,11 +39,12 @@ class SubsplitDAGGraft {
   SubsplitDAGGraft(SubsplitDAG &dag, Bitset &parent_subsplit, Bitset &child_subsplit);
 
   // ** Comparators
+
   // Uses same method of comparison as SubsplitDAG (node and edge sets).
   static int Compare(SubsplitDAGGraft &dag_a, SubsplitDAGGraft &dag_b);
   // Treats SubsplitDAGGraft as completed SubsplitDAG to compare against normal
   // SubsplitDAG.
-  static int Compare(SubsplitDAGGraft &dag_a, SubsplitDAG &dag_b);
+  static int CompareToSubsplitDAG(SubsplitDAGGraft &dag_a, SubsplitDAG &dag_b);
 
   // ** DAG Traversals
   // These traversals cover the DAG as though graft were formally added to host into a
@@ -62,7 +63,7 @@ class SubsplitDAGGraft {
   // Clear all nodes and edges from graft for reuse.
   void RemoveAllGrafts();
   // TODO:
-  // 
+  // Create sorted list of all node in graft.
   void SortGraftNodes();
 
   // ** Clades
@@ -70,14 +71,18 @@ class SubsplitDAGGraft {
   // Add both of node's clades to the clade map.
   void AddNodeClades(const size_t node_id, const Bitset &node_subsplit);
   // Remove both of node's clades from the clade map.
-  void RemoveNodeClades(const size_t node_id, const Bitset &node_subsplit); 
-  // Get all the child nodes of given subsplit (specify left or right child). 
-  SizeVector GetAllChildrenOfNode(const Bitset &node_subsplit, const bool which_child) const;
+  void RemoveNodeClades(const size_t node_id, const Bitset &node_subsplit);
+  // Get all the child nodes of given subsplit (specify left or right child).
+  SizeVector GetAllChildrenOfNode(const Bitset &node_subsplit,
+                                  const bool which_child) const;
   // Get all parent nodes of a given subsplit (specify left or right child).
-  SizeVector GetAllParentsOfNode(const Bitset &node_subsplit, const bool which_child) const;
+  SizeVector GetAllParentsOfNode(const Bitset &node_subsplit,
+                                 const bool which_child) const;
 
   // ** Getters
 
+  // Get pointer to the host DAG.
+  SubsplitDAG *GetHostDAG();
   // Get node based on node id.
   SubsplitDAGNode *GetDAGNode(const size_t node_id) const;
   // Get the node id based on the subsplit bitset.
@@ -85,7 +90,7 @@ class SubsplitDAGGraft {
   // Gets the node id of the DAG root.
   size_t GetRootNodeId() const;
   // Get the node based on the nodes id.
-  SubsplitDAGNode* GetNode(const size_t node_id) const;
+  SubsplitDAGNode *GetNode(const size_t node_id) const;
   // Return the node ids corresponding to the rootsplits.
   const SizeVector &GetRootsplitIds() const;
   // Get the GPCSP/edge index by its parent-child pair subsplits from the DAG nodes.
@@ -125,9 +130,9 @@ class SubsplitDAGGraft {
 
   // ** Traversal
 
-  // 
+  //
   SizeVector LeafwardPostorderTraversalTrace() const;
-  // 
+  //
   SizeVector LeafwardTopologicalTraversalTrace() const;
 
   // ** Validity Tests
@@ -135,24 +140,38 @@ class SubsplitDAGGraft {
   // Checks if host and graft are in a valid state.
   bool IsValid() const;
   // Checks if host and graft are in a valid state to add given node pair.
-  bool IsValidAddNodePair(const Bitset parent_subsplit, const Bitset child_subsplit) const;
+  bool IsValidAddNodePair(const Bitset parent_subsplit,
+                          const Bitset child_subsplit) const;
   // Checks if host and graft are in a valid state to remove given node pair.
-  bool IsValidRemoveNodePair(const Bitset parent_subsplit, const Bitset child_subsplit) const;
+  bool IsValidRemoveNodePair(const Bitset parent_subsplit,
+                             const Bitset child_subsplit) const;
 
  private:
   // ** Modify DAG
+  // These modification do not ensure a valid, consistent state for DAG.
 
   // Add node to the graft.
   void CreateGraftNode(const Bitset &node_subsplit);
   // Add edge to the graft.
-  void CreateGraftEdge(const Bitset &parent_subsplit, const Bitset &child_subsplit);
+  void CreateGraftEdge(const size_t parent_id, const size_t child_id);
+  // Add edge to the graft (Overload for when edge relation is known).
+  void CreateGraftEdge(const size_t parent_id, const size_t child_id,
+                       const bool rotated);
   // Add node to the graft.
   void DestroyGraftNode(const Bitset &node_subsplit);
   void DestroyGraftNode(const size_t node_id);
   // Add edge to the graft.
-  void DestroyGraftEdge(const Bitset &parent_subsplit, const Bitset &child_node_subsplit);
+  void DestroyGraftEdge(const Bitset &parent_subsplit,
+                        const Bitset &child_node_subsplit);
   void DestroyGraftEdge(const size_t parent_id, const size_t child_id);
   void DestroyGraftEdge(const size_t edge_idx);
+  // Connect main node to all adjacent nodes in vector.
+  void ConnectNodeToAdjacentNodes(const size_t main_node_id,
+                                  const SizeVector adjacent_node_ids,
+                                  const bool is_main_node_parent,
+                                  const bool is_left_child,
+                                  const size_t ignored_node_id = 0,
+                                  const bool is_node_ignored = false);
 };
 
 #endif  // SRC_SUBSPLIT_DAG_GRAFT_HPP

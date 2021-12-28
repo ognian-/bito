@@ -77,6 +77,14 @@ class SetOfNNIs : protected std::set<NNIOperation> {
 
   std::set<NNIOperation>::iterator Begin() const { return begin(); };
   std::set<NNIOperation>::iterator End() const { return end(); };
+
+  NNIOperation At(const size_t i) const {
+    auto value_ptr = begin();
+    for (size_t val = 0; val < i; val++) {
+      value_ptr++;
+    }
+    return *value_ptr;
+  }
 };
 
 // TODO:

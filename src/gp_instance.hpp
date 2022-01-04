@@ -98,17 +98,25 @@ class GPInstance {
   // Export the subsplit DAG as a DOT file.
   void SubsplitDAGToDot(const std::string &out_path, bool show_index_labels = true);
 
-  // ** Modify DAG
+  // TODO:
+  // ** NNI Evaluation Engine
 
   // Add parent-child node pair to dag and reorganize underlying data.
   void AddNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
-
-  // ** NNI Evaluation Engine
+  void GraftNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
 
   // Initialize NNI Evaluation Engine.
   void MakeNNIEngine();
+  // Get NNI Evaluation Engine.
+  NNIEvaluationEngine &GetNNIEngine();
   // Get the number of adjacent NNI's for current DAG.
   size_t GetNNICount();
+
+  // Initialize
+  void MakeGraftDAG();
+  // After adding NNI a graft to the grafted DAG, update engine to accomodate new PLVs.
+  void UpdateEngineAfterModifyingDAG();
+  void UpdateEngineAfterGraftingDAG();
 
   // ** Alignment
 
@@ -132,8 +140,13 @@ class GPInstance {
   std::unique_ptr<GPEngine> engine_;
   RootedTreeCollection tree_collection_;
   GPDAG dag_;
-  std::unique_ptr<NNIEvaluationEngine> nni_engine_;
   static constexpr size_t plv_count_per_node_ = 6;
+
+  // TODO: NNI Evaluation Engine 
+  std::unique_ptr<NNIEvaluationEngine> nni_engine_;
+  // NNIEvaluationEngine nni_engine_;
+  // SubsplitDAGGraft graft_dag_;
+  std::string graft_mmap_file_path_;
 };
 
 #endif  // SRC_GP_INSTANCE_HPP_

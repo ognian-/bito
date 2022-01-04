@@ -23,7 +23,9 @@
 class SubsplitDAGNode {
  public:
   SubsplitDAGNode(size_t id, Bitset subsplit)
-      : id_(id), subsplit_(std::move(subsplit)) {}
+      : id_(id), subsplit_(std::move(subsplit)) {
+        // std::cout << "MAKE_NEW_DAG_NODE => " << id_ << " : " << subsplit_.SubsplitToString() << std::endl;
+      }
 
   // Compare SubsplitDAGNode's by their ids.
   static int Compare(const SubsplitDAGNode &node_a, const SubsplitDAGNode &node_b);
@@ -33,9 +35,10 @@ class SubsplitDAGNode {
 
   // Get Node Id.
   size_t Id() const { return id_; }
+  // Set Subsplit representation of node.
+  void SetBitset(const Bitset subsplit) { subsplit_ = subsplit; }
   // Get Subsplit representation of node.
   const Bitset &GetBitset() const { return subsplit_; }
-  // Get Subsplit representation of node with specified rotation.
   const Bitset GetBitset(bool rotated) const {
     return rotated ? subsplit_.SubsplitRotate() : subsplit_;
   }
@@ -127,7 +130,7 @@ class SubsplitDAGNode {
   // dag_nodes_.
   size_t id_;
   // Node bitset subsplit clades.
-  const Bitset subsplit_;
+  Bitset subsplit_;
 
   // List of adjacent nodes in all directions.
   SizeVector leafward_leftside_;

@@ -79,7 +79,6 @@ void GPInstance::CheckSequencesAndTreesLoaded() const {
 
 void GPInstance::MakeEngine(double rescaling_threshold) {
   CheckSequencesAndTreesLoaded();
-  // TODO: Explain site patterns.
   SitePattern site_pattern(alignment_, tree_collection_.TagTaxonMap());
   // Initialize the DAG (uses TidySubsplitDAG constructor).
   dag_ = GPDAG(tree_collection_);
@@ -87,10 +86,8 @@ void GPInstance::MakeEngine(double rescaling_threshold) {
   // Uniform support assigns each possible topology expressed by the DAG to have equal
   // likelihood.
   auto sbn_prior = dag_.BuildUniformOnTopologicalSupportPrior();
-  // TODO:
   auto unconditional_node_probabilities =
       dag_.UnconditionalNodeProbabilities(sbn_prior);
-  // TODO:
   auto inverted_sbn_prior =
       dag_.InvertedGPCSPProbabilities(sbn_prior, unconditional_node_probabilities);
   //
@@ -112,6 +109,17 @@ GPEngine *GPInstance::GetEngine() const {
 }
 
 bool GPInstance::HasEngine() const { return engine_ != nullptr; }
+
+// TODO:
+void GPInstance::UpdateEngineAfterModifyingDAG() {
+}
+
+void GPInstance::UpdateEngineAfterGraftingDAG() {
+}
+
+void ComputePerPCSPForAllNNI(Bitset parent_subsplit, Bitset child_subsplit) {
+
+}
 
 GPDAG &GPInstance::GetDAG() { return dag_; }
 

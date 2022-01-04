@@ -38,24 +38,20 @@ class GPEngine {
   void operator()(const GPOperations::UpdateSBNProbabilities& op);
   void operator()(const GPOperations::PrepForMarginalization& op);
 
-  // Update stats and resize data to reflect SubsplitDAG after modification.
+  // Update stats and data to reflect current SubsplitDAG after modification.
   void Initialize(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
                   const std::string& mmap_file_path, double rescaling_threshold,
                   EigenVectorXd sbn_prior,
                   EigenVectorXd unconditional_node_probabilities,
                   EigenVectorXd inverted_sbn_prior);
+
+  // TODO: Update after modify/grafting DAG.
   // Resize data members to store SubsplitDAG after modification.
-  void ResizeAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
-                            size_t gpcsp_count, const std::string& mmap_file_path,
-                            double rescaling_threshold, EigenVectorXd sbn_prior,
-                            EigenVectorXd unconditional_node_probabilities,
-                            EigenVectorXd inverted_sbn_prior);
+  void UpdateAfterModifyingDAG(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
+                               const std::string& mmap_file_path);
   // Append new data members to store SubsplitDAG growth after modification.
-  void AppendAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
-                            size_t gpcsp_count, const std::string& mmap_file_path,
-                            double rescaling_threshold, EigenVectorXd sbn_prior,
-                            EigenVectorXd unconditional_node_probabilities,
-                            EigenVectorXd inverted_sbn_prior);
+  void UpdateAfterGraftingDAG(SitePattern site_pattern, size_t plv_count,
+                              size_t gpcsp_count, const std::string& mmap_file_path, const std::string& graft_mmap_file_path);
 
   // Apply all operations in vector in order from beginning to end.
   void ProcessOperations(GPOperationVector operations);
@@ -99,6 +95,7 @@ class GPEngine {
   // hybrid_marginal_log_likelihoods_.
   void ProcessQuartetHybridRequest(const QuartetHybridRequest& request);
 
+  // TODO:
   // ** Calculate Hybrid Likelihoods with Graft
   // A SubsplitDAGGraft is a proposed (graft) set of nodes and edges to be added to the
   // (host) SubsplitDAG but have not been formally indexed into the data structure.
@@ -112,6 +109,7 @@ class GPEngine {
   // hybrid_marginal_log_likelihoods_.
   void ProcessQuartetHybridRequestWithGraft(const SubsplitDAGGraft& graft,
                                             const QuartetHybridRequest& request);
+
   //
   void PrintPLV(size_t plv_idx);
 
@@ -262,6 +260,9 @@ class GPEngine {
   EigenMatrixXd quartet_q_s_plv_;
   // The R-PLV pointing leafward from t.
   EigenMatrixXd quartet_r_sorted_plv_;
+
+  // Grafting data.
+  // std::optional<MmappedNucleotidePLV> mmapped_grafted_plv_ = std::nullopt;
 };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

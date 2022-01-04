@@ -328,6 +328,8 @@ std::vector<Bitset> SubsplitDAG::GetSortedVectorOfEdgeBitsets() const {
 
 std::map<std::string, size_t> &SubsplitDAG::GetTaxonMap() { return dag_taxons_; }
 
+BitsetSizeMap &SubsplitDAG::GetSubsplitToIdMap() { return subsplit_to_id_; }
+
 EigenVectorXd SubsplitDAG::BuildUniformOnTopologicalSupportPrior() const {
   EigenVectorXd q = EigenVectorXd::Ones(EdgeCountWithLeafSubsplits());
 
@@ -593,7 +595,7 @@ void SubsplitDAG::CreateAndInsertNode(const Bitset &node_subsplit) {
   // Create node and assign it the highest possible id in the DAG.
   size_t node_id = NodeCount();
   dag_nodes_.push_back(std::make_unique<SubsplitDAGNode>(node_id, node_subsplit));
-  // Insert node into the
+  // Insert node into the subsplit map.
   SafeInsert(subsplit_to_id_, node_subsplit, node_id);
   // Insert node's clades into the clade map.
   AddNodeToClades(node_id, node_subsplit);
@@ -1194,6 +1196,7 @@ SubsplitDAG::ModificationResult SubsplitDAG::AddNodePair(const Bitset &parent_su
     ConnectParentToAllParents(parent_subsplit, added_edge_idxs);
     // ConnectNodeToChildOrParentNodes(parent_id, false, added_edge_idxs);
   }
+
   // Create reindexers.
   node_reindexer = BuildNodeReindexer(prev_node_count);
   edge_reindexer = BuildEdgeReindexer(prev_edge_count);

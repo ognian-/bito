@@ -30,22 +30,31 @@
 template <class T, class Compare>
 class SortedVector {
  public:
-  // Constructor.
-  SortedVector() : data_(){};
-  SortedVector(std::vector &data) : data_(data){};
+  // ** Constructors:
+
+  SortedVector() : data_(), is_sorted_(true){};
+  SortedVector(std::vector &data) : data_(data) { Sort(); };
 
   // ** Sorted methods:
   // These methods preserve the sort in the vector.
 
   // Perfom a fresh sort on all values in the vector.
-  void Sort();
+  void Sort() {
+    std::sort(data_.begin(), data_.end());
+    is_sorted_ = true;
+  };
   // Insert value into vector. Finds insertion point of value and makes gap by right
   // shift.
-  void Insert(T value);
+  void Insert(T value){
+
+  };
   // Insert multiple values into vector.
-  void Insert(std::vector<T> values);
+  void Insert(std::vector<T> values){
+
+  };
   // Delete value from vector. Finds value to delete and closes gap with left shift.
-  void Delete(const T value);
+  void Delete(const T value) { size_t found_idx = Find(value); };
+  void Delete(const size_t idx){std::move()};
   // Lookup by value.
   size_t Find(const T value) const;
   // Check if vector contains value.
@@ -87,9 +96,6 @@ class SortedUniqueVector : public SortedVector {
   // Insert value into vector without maintaining sort.
   void InsertNoSort(T value);
   // Remove ith element from vector.
-  void Remove(size_t i);
-  // Get ith element from vector.
-  T Get(size_t i)
 };
 
 // TODO: Implement class that maintains a argsort vector/set on a data vector?

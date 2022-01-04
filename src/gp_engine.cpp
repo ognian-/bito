@@ -55,63 +55,6 @@ void GPEngine::Initialize(SitePattern site_pattern, size_t plv_count,
   InitializePLVsWithSitePatterns();
 }
 
-// TODO:
-void GPEngine::ResizeAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
-                                    size_t gpcsp_count,
-                                    const std::string& mmap_file_path,
-                                    double rescaling_threshold, EigenVectorXd sbn_prior,
-                                    EigenVectorXd unconditional_node_probabilities,
-                                    EigenVectorXd inverted_sbn_prior) {
-  // Update all field and resize all data that is based on number of nodes, edges, or
-  // topologies.
-  site_pattern_ = std::move(site_pattern);
-  plv_count_ = plv_count;
-  // rescaling_threshold_ = rescaling_threshold;
-  // log_rescaling_threshold_ = log(rescaling_threshold);
-  MmappedNucleotidePLV new_mmapped_master_plv(
-      mmap_file_path, plv_count_ * site_pattern_.PatternCount());
-  // TODO: Fix this!
-  // mmapped_master_plv_ = std::move(new_mmapped_master_plv);
-  plvs_ = NucleotidePLVRefVector(mmapped_master_plv_.Subdivide(plv_count_));
-  q_ = std::move(sbn_prior);
-  unconditional_node_probabilities_ = std::move(unconditional_node_probabilities);
-  inverted_sbn_prior_ = std::move(inverted_sbn_prior);
-  //
-  rescaling_counts_.resize(plv_count_);
-  rescaling_counts_.setZero();
-  branch_lengths_.resize(gpcsp_count);
-  branch_lengths_.setConstant(default_branch_length_);
-  log_marginal_likelihood_.resize(site_pattern_.PatternCount());
-  log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
-  log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
-  //
-  auto weights = site_pattern_.GetWeights();
-  site_pattern_weights_ = EigenVectorXdOfStdVectorDouble(weights);
-  //
-  quartet_root_plv_ = plvs_.at(0);
-  quartet_root_plv_.setZero();
-  quartet_r_s_plv_ = quartet_root_plv_;
-  quartet_q_s_plv_ = quartet_root_plv_;
-  quartet_r_sorted_plv_ = quartet_root_plv_;
-  hybrid_marginal_log_likelihoods_.resize(gpcsp_count);
-  hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
-  //
-  InitializePLVsWithSitePatterns();
-}
-
-// TODO:
-void GPEngine::AppendAfterModifyDAG(SitePattern site_pattern, size_t plv_count,
-                                    size_t gpcsp_count,
-                                    const std::string& mmap_file_path,
-                                    double rescaling_threshold, EigenVectorXd sbn_prior,
-                                    EigenVectorXd unconditional_node_probabilities,
-                                    EigenVectorXd inverted_sbn_prior) {}
-
-void GPEngine::operator()(const GPOperations::ZeroPLV& op) {
-  plvs_.at(op.dest_).setZero();
-  rescaling_counts_(op.dest_) = 0;
-}
-
 void GPEngine::operator()(const GPOperations::SetToStationaryDistribution& op) {
   auto& plv = plvs_.at(op.dest_);
   for (size_t row_idx = 0; row_idx < plv.rows(); ++row_idx) {

@@ -1141,62 +1141,114 @@ TEST_CASE("SubsplitDAGGraft: AddNodePair Equivalence Test") {
   // Instance that will be unaltered.
   auto pre_inst = GPInstanceOfFiles(fasta_path, newick_path);
   GPDAG& pre_dag = pre_inst.GetDAG();
-  SubsplitDAG& pre_dag_as_subsplitdag = pre_inst.GetDAG();
-  // Instance that will be altered.
-  auto inst = GPInstanceOfFiles(fasta_path, newick_path);
-  GPDAG& dag = inst.GetDAG();
-  SubsplitDAG& dag_as_subsplitdag = inst.GetDAG();
-  SubsplitDAGGraft graft_dag = SubsplitDAGGraft(dag);
-
+  // Instance that is used by grafted DAG.
+  auto inst_to_graft = GPInstanceOfFiles(fasta_path, newick_path);
+  GPDAG& dag_to_graft = inst_to_graft.GetDAG();
+  SubsplitDAGGraft graft_dag = SubsplitDAGGraft(dag_to_graft);
   // Find all viable NNIs for DAG.
-  auto nni_engine = NNIEvaluationEngine(dag);
+  auto nni_engine = NNIEvaluationEngine(pre_dag);
   nni_engine.SyncSetOfNNIsWithDAG();
   size_t nni_count = nni_engine.GetAdjacentNNICount();
-  // Select an NNI to add to DAG.
-  auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(0);
-  std::cout << "NNI_TO_ADD: " << nni_to_add.parent_ << "," << nni_to_add.child_ << std::endl;
+  // Check DAG and Grafted DAG equal before adding any NNIs.
+  std::cout << "NODE_COUNTS: " << pre_dag.NodeCount() << "," << graft_dag.NodeCount()
+            << "," << graft_dag.GraftNodeCount() << std::endl;
+  std::cout << "EDGE_COUNTS: " << pre_dag.EdgeCountWithLeafSubsplits() << ","
+            << graft_dag.EdgeCount() << "," << graft_dag.GraftEdgeCount() << std::endl;
+  CHECK_MESSAGE(SubsplitDAGGraft::CompareToDAG(graft_dag, pre_dag) == 0,
+                "DAG_GRAFT not equal to DAG before AddNodePair.");
 
-  std::cout << "NODE_COUNTS: " << pre_dag.NodeCount() << "," << graft_dag.NodeCount() << std::endl;
-  std::cout << "EDGE_COUNTS: " << pre_dag.EdgeCountWithLeafSubsplits() << "," << graft_dag.EdgeCount() << std::endl;
-  CHECK_MESSAGE( SubsplitDAGGraft::CompareToSubsplitDAG(graft_dag, pre_dag_as_subsplitdag) == 0, "DAG_GRAFT not equal to DAG before AddNodePair.");
-
+  // Test equivalence after adding NNI.
+  size_t i = 0;
+  auto inst = GPInstanceOfFiles(fasta_path, newick_path);
+  GPDAG& dag = inst.GetDAG();
+  auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(i);
+  std::cout << "NNI_TO_ADD [" << i << "]: " << nni_to_add.parent_.SubsplitToString() << "," << nni_to_add.child_.SubsplitToString()
+            << std::endl;
+  std::cout << "Adding Node Pair..." << std::endl;
+  std::cout << "Adding Node Pair to DAG." << std::endl;
   dag.AddNodePair(nni_to_add.parent_, nni_to_add.child_);
+  std::cout << "Adding Node Pair to Graft." << std::endl;
   graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
-  std::cout << "NODE_COUNTS: " << dag.NodeCount() << "," << graft_dag.NodeCount() << std::endl;
-  std::cout << "EDGE_COUNTS: " << dag.EdgeCountWithLeafSubsplits() << "," << graft_dag.EdgeCount() << std::endl;
-  // CHECK_MESSAGE( SubsplitDAGGraft::Compare(graft_dag, dag_as_subsplitdag) == 0, "DAG_GRAFT not equal to DAG after AddNodePair.");
-
+  std::cout << "NODE_COUNTS: " << dag.NodeCount() << "," << graft_dag.NodeCount() << ","
+            << graft_dag.GraftNodeCount() << std::endl;
+  std::cout << "EDGE_COUNTS: " << dag.EdgeCountWithLeafSubsplits() << ","
+            << graft_dag.EdgeCount() << "," << graft_dag.GraftEdgeCount() << std::endl;
+  CHECK_MESSAGE(SubsplitDAGGraft::CompareToDAG(graft_dag, dag) == 0,
+                "DAG_GRAFT not equal to DAG after AddNodePair.");
+  // Clear grafts from Grafted DAG.
   graft_dag.RemoveAllGrafts();
-  std::cout << "NODE_COUNTS: " << pre_dag.NodeCount() << "," << graft_dag.NodeCount() << std::endl;
-  std::cout << "EDGE_COUNTS: " << pre_dag.EdgeCountWithLeafSubsplits() << "," << graft_dag.EdgeCount() << std::endl;
-  // CHECK_MESSAGE( SubsplitDAGGraft::Compare(graft_dag, pre_dag_as_subsplitdag) == 0, "DAG_GRAFT not equal to DAG after RemoveAllGrafts.");
+
+  // Add all NNI one-by-one to DAG and Grafted DAG.
+  for (int i = 0; i < 1; i++) {
+    // New temporary DAG to will be altered.
+    auto inst = GPInstanceOfFiles(fasta_path, newick_path);
+    GPDAG& dag = inst.GetDAG();
+    // Add NNIs.
+    auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(i);
+    dag.AddNodePair(nni_to_add.parent_, nni_to_add.child_);
+    graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
+    // Clear grafts from Grafted DAG.
+    graft_dag.RemoveAllGrafts();
+  }
+
+  // Check that cleared Grafted DAG is still equal to initial DAG.
+  graft_dag.RemoveAllGrafts();
+  std::cout << "NODE_COUNTS: " << pre_dag.NodeCount() << "," << graft_dag.NodeCount()
+            << "," << graft_dag.GraftNodeCount() << std::endl;
+  std::cout << "EDGE_COUNTS: " << pre_dag.EdgeCountWithLeafSubsplits() << ","
+            << graft_dag.EdgeCount() << "," << graft_dag.GraftEdgeCount() << std::endl;
+  CHECK_MESSAGE(SubsplitDAGGraft::CompareToDAG(graft_dag, pre_dag) == 0,
+                "DAG_GRAFT not equal to DAG after RemoveAllGrafts.");
 }
 
+// TODO: Work in Progress
 // Check that Grafted SubsplitDAG
 TEST_CASE("SubsplitDAGGraft: PerPCSP Likelihood Test.") {
-  // Simple DAG that contains a shared edge, internal leafward fork, and an internal
-  // rootward fork.
-  const std::string fasta_path = "data/six_taxon.fasta";
-  const std::string newick_path = "data/six_taxon_rooted_simple.nwk";
-  // Instance that will be unaltered.
-  auto pre_inst = GPInstanceOfFiles(fasta_path, newick_path);
-  GPDAG& pre_dag = pre_inst.GetDAG();
-  SubsplitDAG& pre_dag_as_subsplitdag = pre_inst.GetDAG();
-  // Instance that will be altered.
-  auto inst = GPInstanceOfFiles(fasta_path, newick_path);
-  GPDAG& dag = inst.GetDAG();
-  SubsplitDAG& dag_as_subsplitdag = inst.GetDAG();
-  SubsplitDAGGraft graft_dag = SubsplitDAGGraft(dag);
-
-  // Find all viable NNIs for DAG.
-  auto nni_engine = NNIEvaluationEngine(dag);
-  nni_engine.SyncSetOfNNIsWithDAG();
-  size_t nni_count = nni_engine.GetAdjacentNNICount();
-  // Select an NNI to add to DAG.
-  auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(0);
-
   
+  // // Simple DAG that contains a shared edge, internal leafward fork, and an internal
+  // // rootward fork.
+  // const std::string fasta_path = "data/six_taxon.fasta";
+  // const std::string newick_path = "data/six_taxon_rooted_simple.nwk";
+  // // Instance that will be unaltered.
+  // auto pre_inst = GPInstanceOfFiles(fasta_path, newick_path);
+  // GPDAG& pre_dag = pre_inst.GetDAG();
+  // // Instance that is used by grafted DAG.
+  // auto inst_to_graft = GPInstanceOfFiles(fasta_path, newick_path);
+  // GPDAG& dag_to_graft = inst_to_graft.GetDAG();
+  // SubsplitDAGGraft graft_dag = SubsplitDAGGraft(dag_to_graft);
+  // // inst_to_graft.SetGraftDAG();
+  // // Instance that will be altered.
+  // auto inst = GPInstanceOfFiles(fasta_path, newick_path);
+  // GPDAG& dag = inst.GetDAG();
+  // // Find all viable NNIs for DAG.
+  // auto nni_engine = NNIEvaluationEngine(pre_dag);
+  // nni_engine.SyncSetOfNNIsWithDAG();
+  // size_t nni_count = nni_engine.GetAdjacentNNICount();
+  // // Compute Likelihoods of unaltered DAG.
+  // inst.PopulatePLVs();
+  // inst.ComputeLikelihoods();
+  // EigenVectorXd realized_log_likelihoods =
+  //     inst.GetEngine()->GetPerGPCSPLogLikelihoods();
+  // inst_to_graft.PopulatePLVs();
+  // inst_to_graft.ComputeLikelihoods();
+  // EigenVectorXd grafted_realized_log_likelihoods =
+  //     inst_to_graft.GetEngine()->GetPerGPCSPLogLikelihoods();
+  // // Add an NNI.
+  // auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(0);
+  // auto dag_modifications = dag.AddNodePair(nni_to_add.parent_, nni_to_add.child_);
+  // graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
+  // // Reinitialize Engine with added NNI.
+  // // inst.GetEngine()->ResizeAfterModifyingDAG();
+  // // inst_to_graft.GetEngine()->ResizeAfterGraftingDAG();
+  // // Compute NNI PLVs.
+  // for (size_t i = 0; i < nni_count; i++) {
+  //   auto nni = nni_engine.GetNNIFromAdjacentNNIs(i);
+  //   Bitset parent_nni = nni.parent_;
+  //   Bitset child_nni = nni.child_;
+  // }
 }
 
 // Build SubsplitDAG instance and procedurally add random NNIs.
-TEST_CASE("SubsplitDAG NNI Speed Test") {}
+TEST_CASE("SubsplitDAG NNI Speed Test") {
+
+}

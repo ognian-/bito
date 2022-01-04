@@ -6,11 +6,13 @@
 // reindexing the full DAG.
 // NOTE: This may add overhead to DAG traversals.
 
-#include "subsplit_dag.hpp"
 #include "gp_dag.hpp"
+#include "subsplit_dag.hpp"
 
 #ifndef SRC_SUBSPLIT_DAG_GRAFT_HPP
 #define SRC_SUBSPLIT_DAG_GRAFT_HPP
+
+class GPDAG;
 
 class SubsplitDAGGraft {
  protected:
@@ -21,7 +23,7 @@ class SubsplitDAGGraft {
   // Edges in the graft.
   std::map<SizePair, size_t> graft_edges_;
   // Ids of nodes that are adjacent to a graft node (connect by edge).
-  std::vector<size_t> bridge_nodes_;
+  std::map<size_t, std::unique_ptr<SubsplitDAGNode>> bridge_nodes_;
   // - Map of all DAG Nodes:
   //    - [ Node Subsplit (Bitset) => Node Id ]
   BitsetSizeMap subsplit_to_id_;
@@ -44,7 +46,7 @@ class SubsplitDAGGraft {
   static int Compare(SubsplitDAGGraft &dag_a, SubsplitDAGGraft &dag_b);
   // Treats SubsplitDAGGraft as completed SubsplitDAG to compare against normal
   // SubsplitDAG.
-  static int CompareToSubsplitDAG(SubsplitDAGGraft &dag_a, SubsplitDAG &dag_b);
+  static int CompareToDAG(SubsplitDAGGraft &dag_a, GPDAG &dag_b);
 
   // ** DAG Traversals
   // These traversals cover the DAG as though graft were formally added to host into a
@@ -69,9 +71,9 @@ class SubsplitDAGGraft {
   // ** Clades
 
   // Add both of node's clades to the clade map.
-  void AddNodeClades(const size_t node_id, const Bitset &node_subsplit);
+  void AddNodeToClades(const size_t node_id, const Bitset &node_subsplit);
   // Remove both of node's clades from the clade map.
-  void RemoveNodeClades(const size_t node_id, const Bitset &node_subsplit);
+  void RemoveNodeFromClades(const size_t node_id, const Bitset &node_subsplit);
   // Get all the child nodes of given subsplit (specify left or right child).
   SizeVector GetAllChildrenOfNode(const Bitset &node_subsplit,
                                   const bool which_child) const;
@@ -107,6 +109,8 @@ class SubsplitDAGGraft {
 
   // ** Counts
 
+  // Total number of taxa in DAG (same as Subsplit length).
+  size_t TaxonCount() const;
   // Total number of nodes in full proposed DAG.
   size_t NodeCount() const;
   // Total number of nodes in graft only.
@@ -122,9 +126,14 @@ class SubsplitDAGGraft {
 
   // ** Contains
 
+  // Checks whether the node is in the DAG or the graft.
+  bool ContainsNode(const Bitset node_subsplit) const;
+  bool ContainsNode(const size_t node_id) const;
   // Checks whether the node is in the graft only.
   bool ContainsGraftNode(const Bitset node_subsplit) const;
   bool ContainsGraftNode(const size_t node_id) const;
+  // Checks whether the edge is in the DAG or the graft.
+  bool ContainsEdge(const size_t parent_id, const size_t child_id) const;
   // Checks whether the edge is in the graft only.
   bool ContainsGraftEdge(const size_t parent_id, const size_t child_id) const;
 
@@ -166,12 +175,11 @@ class SubsplitDAGGraft {
   void DestroyGraftEdge(const size_t parent_id, const size_t child_id);
   void DestroyGraftEdge(const size_t edge_idx);
   // Connect main node to all adjacent nodes in vector.
-  void ConnectNodeToAdjacentNodes(const size_t main_node_id,
+  void ConnectNodeToAdjacentHostNodes(const size_t main_node_id,
                                   const SizeVector adjacent_node_ids,
                                   const bool is_main_node_parent,
                                   const bool is_left_child,
-                                  const size_t ignored_node_id = 0,
-                                  const bool is_node_ignored = false);
+                                  std::optional<size_t> ignored_node_id_opt = std::nullopt);
 };
 
 #endif  // SRC_SUBSPLIT_DAG_GRAFT_HPP

@@ -34,7 +34,6 @@
 // zeros (e.g. for taxon_count_ = 4, 1111|0000). Note that this implies that the DAG
 // root node only has rotated children. Children of the DAG root node are called
 // "rootsplits" and partition the whole taxon set.
-// TODO: What are edge idx's used for?
 
 #ifndef SRC_SUBSPLIT_DAG_HPP_
 #define SRC_SUBSPLIT_DAG_HPP_
@@ -66,7 +65,7 @@ class SubsplitDAG {
   friend bool operator==(const SubsplitDAG &lhs, const SubsplitDAG &rhs);
   friend bool operator!=(const SubsplitDAG &lhs, const SubsplitDAG &rhs);
 
-  // ** Count
+  // ** Counts
 
   // The total number of individual taxa in the DAG.
   size_t TaxonCount() const;
@@ -159,6 +158,8 @@ class SubsplitDAG {
   std::vector<Bitset> GetSortedVectorOfEdgeBitsets() const;
   // Get reference to taxon map.
   std::map<std::string, size_t> &GetTaxonMap();
+  // Get subsplit to id map.
+  BitsetSizeMap &GetSubsplitToIdMap();
 
   // ** DAG Lambda Iterator
   // These methods iterate over the nodes and take lambda functions with arguments
@@ -434,12 +435,6 @@ class SubsplitDAG {
                                         const Bitset &subsplit,
                                         bool include_leaf_subsplits = false);
 
-  // ** Count methods:
-
-  // Traverses the DAG and refreshes count of the number of topologies contained in the
-  // DAG. Updates topology_count_ and topology_count_below_, which contains the count of
-  void CountTopologies();
-
   // ** DAG Traversal methods:
   // NOTES: - visit_order is the output vector of node ids in specified traversal order.
   //        - visited_nodes is a set of all node ids reached by traversal.
@@ -471,18 +466,18 @@ class SubsplitDAG {
   // Reorder nodes so that DAG nodes sorted in a topological ordering.
   void SortNodes();
 
-  // Add edge between given parent and child nodes to the DAG.
+  // Add edge relationship to each node's respective SubsplitDAGNode.
   void ConnectGivenNodes(const size_t parent_id, const size_t child_id, bool rotated);
-  // Add edge between node_id and nodes according to index to child
+  // Add edge between node_id and nodes according to index to child.
   void ConnectNodes(const SizeBitsetMap &index_to_child, size_t node_id, bool rotated);
-  // 
+  //
   void BuildNodes(const SizeBitsetMap &index_to_child, const BitsetVector &rootsplits);
-  // 
+  //
   void BuildNodesDepthFirst(const SizeBitsetMap &index_to_child, const Bitset &subsplit,
                             std::unordered_set<Bitset> &visited_subsplits);
-  // 
+  //
   void BuildEdges(const SizeBitsetMap &index_to_child);
-  // 
+  //
   void BuildDAGEdgesFromEdgeIndexer(BitsetSizeMap &edge_indexer);
   // Adds edges to DAG and to DAGNodes, connecting focal node to every node in
   // adjacent_node_ids, with the option to ignore one node id (will not create connect
@@ -492,12 +487,12 @@ class SubsplitDAG {
       const bool is_main_node_parent, const bool is_left_child,
       std::optional<SizeVector> added_edge_idxs = std::nullopt,
       const std::optional<size_t> ignored_node_id_opt = std::nullopt);
-  // Add edges to DAG and to DAGNodes, connecting focal node to all parent nodes or all child nodes.
+  // Add edges to DAG and to DAGNodes, connecting focal node to all parent nodes or all
+  // child nodes.
   void ConnectNodeToChildOrParentNodes(
       const size_t focal_node_id, const bool is_focal_parent,
       std::optional<SizeVector> added_edge_idxs = std::nullopt,
       const std::optional<size_t> ignored_node_id_opt = std::nullopt);
-
   // Connect the child to all of its children. Push all new edges to
   // added_edge_idxs.
   void ConnectChildToAllChildren(const Bitset &child_subsplit,
@@ -518,6 +513,10 @@ class SubsplitDAG {
                                  SizeVector &added_edge_idxs);
   // Expand dag_edges_ and parent_to_child_range_ with leaf subsplits at the end.
   void AddLeafSubsplitsToDAGEdgesAndParentToRange();
+  // To be called after modifying the DAG.
+  // Traverses the DAG and refreshes count of the number of topologies contained in the
+  // DAG. Updates topology_count_ and topology_count_below_.
+  void CountTopologies();
 
   // ** Clades
 
@@ -574,8 +573,8 @@ class SubsplitDAG {
   size_t edge_count_without_leaf_subsplits_;
   // Total number of tree topologies spanned by the DAG.
   double topology_count_;
-  // Storage for the number of topologies below for each node. Each index maps to the
-  // count for the corresponding node_id.
+  // Storage for the number of topologies possible below for each node. Each index maps
+  // to the topology count for the corresponding node_id.
   EigenVectorXd topology_count_below_;
 };
 

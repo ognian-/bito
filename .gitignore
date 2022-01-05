@@ -48,6 +48,7 @@ _sources
 .RData
 .Rhistory
 .vscode
+.gdbinit
 
 # Python packaging
 dist/

@@ -3,8 +3,7 @@ from pytest import approx
 import bito
 import vip.burrito
 
-
-def test_elbo_innards():
+def test_elbo():
     """ From Mathieu:
     tree.mars.distance mu: -1.728809 sigma: 0.459529 sample: 0.184472
     tree.saturn.distance mu: -2.410943 sigma: 0.748569 sample: 0.027993
@@ -12,6 +11,7 @@ def test_elbo_innards():
     like: -81.446550 prior: 4.327275 logQ: 5.330697
     elbo: -82.449972
     """
+    print("### TEST BURRITO ###")
 
     phylo_model_specification = bito.PhyloModelSpecification(
         substitution="JC69", site="constant", clock="strict"
@@ -50,3 +50,8 @@ def test_elbo_innards():
     assert burro.branch_model.log_prob(
         px_theta_sample, px_branch_representation
     ) == approx(5.330697, rel=1e-5)
+
+# run tests if called directly
+if __name__ == "__main__":
+    test_elbo()
+    print('# test completed successfully.')

@@ -73,6 +73,7 @@ add_library(bito-core SHARED
 	src/numerical_utils.cpp
 	src/parser.cpp
 	src/phylo_model.cpp
+  src/phylo_flags.cpp
 	src/psp_indexer.cpp
 	src/quartet_hybrid_request.cpp
 	src/rooted_gradient_transforms.cpp

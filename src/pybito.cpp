@@ -3,6 +3,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+
 #include <pybind11/eigen.h>
 #include <pybind11/iostream.h>
 #include <pybind11/numpy.h>
@@ -13,6 +14,7 @@
 #include <string>
 
 #include "gp_instance.hpp"
+#include "phylo_flags.hpp"
 #include "rooted_gradient_transforms.hpp"
 #include "rooted_sbn_instance.hpp"
 #include "unrooted_sbn_instance.hpp"
@@ -250,12 +252,40 @@ PYBIND11_MODULE(bito, m) {
           py::arg("csv_path"), py::arg("initialize_time_trees_using_branch_lengths"))
 
       // ** Phylogenetic likelihood
-      .def("log_likelihoods", &RootedSBNInstance::LogLikelihoods,
+      .def("log_likelihoods", py::overload_cast<>(&RootedSBNInstance::LogLikelihoods),
            "Calculate log likelihoods for the current set of trees.")
+      .def("log_likelihoods",
+           py::overload_cast<StringVector &, bool>(&RootedSBNInstance::LogLikelihoods),
+           "Calculate log likelihoods for the current set of trees.")
+      .def("log_likelihoods",
+           py::overload_cast<StringDoubleVector &, bool>(
+               &RootedSBNInstance::LogLikelihoods),
+           "Calculate log likelihoods for the current set of trees.")
+      .def("log_likelihoods",
+           py::overload_cast<std::optional<PhyloFlags>>(
+               &RootedSBNInstance::LogLikelihoods),
+           "Calculate log likelihoods for the current set of trees.")
+      .def("log_det_jacobian_of_height_transform",
+           &RootedSBNInstance::LogDetJacobianHeightTransform,
+           "Calculate the log det jacobian of the node height transform.")
       .def("set_rescaling", &RootedSBNInstance::SetRescaling,
            "Set whether BEAGLE's likelihood rescaling is used.")
-      .def("phylo_gradients", &RootedSBNInstance::PhyloGradients,
+      .def("phylo_gradients", py::overload_cast<>(&RootedSBNInstance::PhyloGradients),
            "Calculate gradients of parameters for the current set of trees.")
+      .def("phylo_gradients",
+           py::overload_cast<StringVector &, bool>(&RootedSBNInstance::PhyloGradients),
+           "Calculate gradients of parameters for the current set of trees according "
+           "to flags.")
+      .def("phylo_gradients",
+           py::overload_cast<StringDoubleVector &, bool>(
+               &RootedSBNInstance::PhyloGradients),
+           "Calculate gradients of parameters for the current set of trees according "
+           "to flags.")
+      .def("phylo_gradients",
+           py::overload_cast<std::optional<PhyloFlags>>(
+               &RootedSBNInstance::PhyloGradients),
+           "Calculate gradients of parameters for the current set of trees according "
+           "to flags.")
 
       // ** I/O
       .def("read_newick_file", &RootedSBNInstance::ReadNewickFile,
@@ -381,6 +411,10 @@ PYBIND11_MODULE(bito, m) {
   // FUNCTIONS
   m.def("ratio_gradient_of_height_gradient", &RatioGradientOfHeightGradientEigen,
         "Obtain a ratio gradient from a height gradient.");
+  m.def("log_det_jacobian_of_height_transform", &LogDetJacobianHeightTransform,
+        "Obtain the log determinant jacobian of a height transform.");
+  m.def("log_det_jacobian_determinant", &GradientLogDeterminantJacobian,
+        "Obtain the log determinant of the gradient");
 
   // CLASS
   // GPInstance
@@ -481,4 +515,33 @@ PYBIND11_MODULE(bito, m) {
              "(necessary for partitions; typically performs better for problems with "
              "fewer pattern sites)")
       .export_values();
+
+  py::class_<PhyloFlags> phylo_flags = m.def_submodule("phylo_flags",
+                                                       R"raw(
+        Option flags for functions such as ``bito.rooted_instance.phylo_gradient()``
+        
+        They are used in Python like ``phylo_flags.CLOCK_MODEL_RATES``.
+      )raw");
+  // Options for PhyloGradient::Gradient()
+  for (auto phylo_name_flag : PhyloFlags::gradient_options_.all_options_) {
+    phylo_flags.attr(phylo_name_flag.name_.c_str()) =
+        py::cast(std::string(phylo_name_flag.flag_));
+  }
+  // Options for PhyloGradient::LogLikelihood()
+  for (auto phylo_name_flag : PhyloFlags::loglikelihood_options_.all_options_) {
+    phylo_flags.attr(phylo_name_flag.name_.c_str()) =
+        py::cast(std::string(phylo_name_flag.flag_));
+  }
+
+  py::class_<PhyloFlags> phylo_keys = m.def_submodule("phylo_keys",
+                                                      R"raw(
+        Dict keys for accessing parts of the PhyloModel.
+        
+        They are used in Python like ``phylo_keys.CLOCK_MODEL_RATES``.
+      )raw");
+  //   Map Keys for PhyloGradient::phylo_model_param_block_map
+  for (auto phylo_name_flag : PhyloFlags::gradient_mapkeys_.all_keys_) {
+    phylo_keys.attr(phylo_name_flag.name_.c_str()) =
+        py::cast(std::string(phylo_name_flag.flag_));
+  }
 }

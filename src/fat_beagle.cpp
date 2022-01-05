@@ -7,7 +7,9 @@
 #include <utility>
 #include <vector>
 
+#include "phylo_flags.hpp"
 #include "rooted_gradient_transforms.hpp"
+#include "stick_breaking_transform.hpp"
 
 FatBeagle::FatBeagle(const PhyloModelSpecification &specification,
                      const SitePattern &site_pattern,
@@ -68,28 +70,16 @@ double FatBeagle::LogLikelihoodInternals(
   return log_like;
 }
 
-double FatBeagle::LogLikelihood(const UnrootedTree &tree) const {
+double FatBeagle::LogLikelihood(const UnrootedTree &tree,
+                                std::optional<PhyloFlags> flags) const {
   auto detrifurcated_tree = tree.Detrifurcate();
   return LogLikelihoodInternals(detrifurcated_tree.Topology(),
                                 detrifurcated_tree.BranchLengths());
 }
 
-double FatBeagle::UnrootedLogLikelihood(const RootedTree &tree) const {
+double FatBeagle::UnrootedLogLikelihood(const RootedTree &tree,
+                                        std::optional<PhyloFlags> flags) const {
   return LogLikelihoodInternals(tree.Topology(), tree.BranchLengths());
-}
-
-double LogDeterminantJacobian(const RootedTree &tree) {
-  double log_det_jacobian = 0.0;
-  size_t leaf_count = tree.LeafCount();
-  tree.Topology()->TripleIdPreorderBifurcating(
-      [&log_det_jacobian, &tree, leaf_count](size_t node_id, size_t sister_id,
-                                             size_t parent_id) {
-        if (node_id >= leaf_count) {
-          log_det_jacobian +=
-              std::log(tree.node_heights_[parent_id] - tree.node_bounds_[node_id]);
-        }
-      });
-  return log_det_jacobian;
 }
 
 double FatBeagle::LogLikelihood(const RootedTree &tree) const {
@@ -98,8 +88,28 @@ double FatBeagle::LogLikelihood(const RootedTree &tree) const {
   for (size_t i = 0; i < tree.BranchLengths().size() - 1; i++) {
     branch_lengths[i] *= rates[i];
   }
+  double log_likelihood = LogLikelihoodInternals(tree.Topology(), branch_lengths);
+
   return LogLikelihoodInternals(tree.Topology(), branch_lengths) +
-         LogDeterminantJacobian(tree);
+         ::LogDetJacobianHeightTransform(tree);
+}
+
+double FatBeagle::LogLikelihood(const RootedTree &tree,
+                                std::optional<PhyloFlags> flags) const {
+  double log_likelihood = 0.0f;
+  std::vector<double> branch_lengths = tree.BranchLengths();
+  const std::vector<double> &rates = tree.GetRates();
+  for (size_t i = 0; i < tree.BranchLengths().size() - 1; i++) {
+    branch_lengths[i] *= rates[i];
+  }
+  log_likelihood += LogLikelihoodInternals(tree.Topology(), branch_lengths);
+  // Only exclude log_det_jacobian if flagged specifically.
+  if (PhyloFlags::IsFlagNotChecked(
+          flags,
+          PhyloFlags::loglikelihood_options_.exclude_log_det_jacobian_likelihood_)) {
+    log_likelihood += LogDetJacobianHeightTransform(tree);
+  }
+  return log_likelihood;
 }
 
 // Build differential matrix and scale it.
@@ -179,28 +189,40 @@ FatBeagle *NullPtrAssert(FatBeagle *fat_beagle) {
 }
 
 double FatBeagle::StaticUnrootedLogLikelihood(FatBeagle *fat_beagle,
-                                              const UnrootedTree &in_tree) {
+                                              const UnrootedTree &in_tree,
+                                              std::optional<PhyloFlags> flags) {
   return NullPtrAssert(fat_beagle)->LogLikelihood(in_tree);
 }
 
 double FatBeagle::StaticUnrootedLogLikelihoodOfRooted(FatBeagle *fat_beagle,
-                                                      const RootedTree &in_tree) {
+                                                      const RootedTree &in_tree,
+                                                      std::optional<PhyloFlags> flags) {
   return NullPtrAssert(fat_beagle)->UnrootedLogLikelihood(in_tree);
 }
 
 double FatBeagle::StaticRootedLogLikelihood(FatBeagle *fat_beagle,
-                                            const RootedTree &in_tree) {
-  return NullPtrAssert(fat_beagle)->LogLikelihood(in_tree);
+                                            const RootedTree &in_tree,
+                                            std::optional<PhyloFlags> flags) {
+  return NullPtrAssert(fat_beagle)->LogLikelihood(in_tree, flags);
 }
 
 PhyloGradient FatBeagle::StaticUnrootedGradient(FatBeagle *fat_beagle,
-                                                const UnrootedTree &in_tree) {
+                                                const UnrootedTree &in_tree,
+                                                std::optional<PhyloFlags> flags) {
   return NullPtrAssert(fat_beagle)->Gradient(in_tree);
 }
 
 PhyloGradient FatBeagle::StaticRootedGradient(FatBeagle *fat_beagle,
-                                              const RootedTree &in_tree) {
-  return NullPtrAssert(fat_beagle)->Gradient(in_tree);
+                                              const RootedTree &in_tree,
+                                              std::optional<PhyloFlags> flags) {
+  return NullPtrAssert(fat_beagle)->Gradient(in_tree, flags);
+}
+
+double FatBeagle::StaticLogDetJacobianHeightTransform(FatBeagle *fat_beagle,
+                                                      const RootedTree &in_tree,
+                                                      std::optional<PhyloFlags> flags) {
+  NullPtrAssert(fat_beagle);
+  return LogDetJacobianHeightTransform(in_tree);
 }
 
 std::pair<FatBeagle::BeagleInstance, FatBeagle::PackedBeagleFlags>
@@ -359,6 +381,7 @@ void FatBeagle::AddUpperPartialOperation(BeagleOperationVector &operations,
       sister_id                    // matrices of sibling
   });
 }
+
 // Calculation of the substitution rate gradient.
 // \partial{L}/\partial{r_i} = \partial{L}/\partial{b_i} \partial{b_i}/\partial{r_i}
 // For strict clock:
@@ -398,19 +421,21 @@ std::vector<double> DiscreteSiteModelGradient(
 
 template <typename TTree>
 std::vector<double> FatBeagle::SubstitutionModelGradientFiniteDifference(
-    std::function<double(FatBeagle *, const TTree &)> f, FatBeagle *fat_beagle,
-    const TTree &tree, SubstitutionModel *subst_model, const std::string &parameter_key,
-    EigenVectorXd param_vector, double delta) const {
-  return SubstitutionModelGradientFiniteDifference(f, fat_beagle, tree, subst_model,
+    std::function<double(FatBeagle *, const TTree &, std::optional<PhyloFlags>)> func,
+    FatBeagle *fat_beagle, const TTree &tree, SubstitutionModel *subst_model,
+    const std::string &parameter_key, EigenVectorXd param_vector, double delta,
+    std::optional<PhyloFlags> flags) const {
+  return SubstitutionModelGradientFiniteDifference(func, fat_beagle, tree, subst_model,
                                                    parameter_key, param_vector, delta,
                                                    IdentityTransform());
 }
 
 template <typename TTree>
 std::vector<double> FatBeagle::SubstitutionModelGradientFiniteDifference(
-    std::function<double(FatBeagle *, const TTree &)> f, FatBeagle *fat_beagle,
-    const TTree &tree, SubstitutionModel *subst_model, const std::string &parameter_key,
-    EigenVectorXd param_vector, double delta, const Transform &transform) const {
+    std::function<double(FatBeagle *, const TTree &, std::optional<PhyloFlags>)> func,
+    FatBeagle *fat_beagle, const TTree &tree, SubstitutionModel *subst_model,
+    const std::string &parameter_key, EigenVectorXd param_vector, double delta,
+    const Transform &transform, std::optional<PhyloFlags> flags) const {
   auto [parameter_start, parameter_length] =
       subst_model->GetBlockSpecification().GetMap().at(parameter_key);
 
@@ -427,14 +452,14 @@ std::vector<double> FatBeagle::SubstitutionModelGradientFiniteDifference(
         transform(parameters_reparameterized);
     subst_model->SetParameters(param_vector);
     UpdateSubstitutionModelInBeagle();
-    double log_prob_plus = f(fat_beagle, tree);
+    double log_prob_plus = func(fat_beagle, tree, flags);
 
     parameters_reparameterized[parameter_idx] = original_parameter_value - delta;
     param_vector.segment(parameter_start, parameter_length) =
         transform(parameters_reparameterized);
     subst_model->SetParameters(param_vector);
     UpdateSubstitutionModelInBeagle();
-    double log_prob_minus = f(fat_beagle, tree);
+    double log_prob_minus = func(fat_beagle, tree, flags);
 
     gradient[parameter_idx] = (log_prob_plus - log_prob_minus) / (2. * delta);
 
@@ -446,9 +471,15 @@ std::vector<double> FatBeagle::SubstitutionModelGradientFiniteDifference(
 }
 
 template <typename TTree>
-std::vector<double> FatBeagle::SubstitutionModelGradient(
-    std::function<double(FatBeagle *, const TTree &)> f, FatBeagle *fat_beagle,
-    const TTree &tree) const {
+PairDoubleVector FatBeagle::SubstitutionModelGradient(
+    std::function<double(FatBeagle *, const TTree &, std::optional<PhyloFlags>)> func,
+    FatBeagle *fat_beagle, const TTree &tree, std::optional<PhyloFlags> flags) const {
+  // Resolve flags.
+  bool do_rates_grad = PhyloFlags::IsFlagChecked(
+      flags, PhyloFlags::gradient_options_.substitution_model_rates_);
+  bool do_freqs_grad = PhyloFlags::IsFlagChecked(
+      flags, PhyloFlags::gradient_options_.substitution_model_frequencies_);
+  // Retrieve frequency and rate data from data map.
   auto subst_model = phylo_model_->GetSubstitutionModel();
   EigenVectorXd param_vector(subst_model->GetBlockSpecification().ParameterCount());
   auto subst_map = subst_model->GetBlockSpecification().GetMap();
@@ -458,28 +489,36 @@ std::vector<double> FatBeagle::SubstitutionModelGradient(
   param_vector.segment(subst_map.at(SubstitutionModel::rates_key_).first,
                        subst_map.at(SubstitutionModel::rates_key_).second) =
       phylo_model_->GetSubstitutionModel()->GetRates();
-  // #324: make delta part of a gradient request
-  double delta = 1.e-6;
-  std::vector<double> frequencies_grad = SubstitutionModelGradientFiniteDifference(
-      f, fat_beagle, tree, subst_model, SubstitutionModel::frequencies_key_,
-      param_vector, delta, StickBreakingTransform());
-
-  std::vector<double> gradient;
-  // Rates in the GTR model are constrained to sum to 1
-  if (subst_model->GetRates().size() == 6) {
-    gradient = SubstitutionModelGradientFiniteDifference(
-        f, fat_beagle, tree, subst_model, SubstitutionModel::rates_key_, param_vector,
-        delta, StickBreakingTransform());
-  } else {
-    gradient = SubstitutionModelGradientFiniteDifference(
-        f, fat_beagle, tree, subst_model, SubstitutionModel::rates_key_, param_vector,
-        delta);
+  // Compute gradients with delta.
+  double delta = PhyloFlags::GetFlagValueIfSet(
+      flags, PhyloFlags::gradient_options_.set_gradient_delta_, 1.e-6);
+  // Compute frequency gradients.
+  std::vector<double> freqs_grad;
+  if (do_freqs_grad) {
+    freqs_grad = SubstitutionModelGradientFiniteDifference(
+        func, fat_beagle, tree, subst_model, SubstitutionModel::frequencies_key_,
+        param_vector, delta, StickBreakingTransform());
   }
-  gradient.insert(gradient.end(), frequencies_grad.begin(), frequencies_grad.end());
-  return gradient;
+  // Compute rate gradients
+  std::vector<double> rates_grad;
+  if (do_rates_grad) {
+    // Rates in the GTR model are constrained to sum to 1
+    if (subst_model->GetRates().size() == 6) {
+      rates_grad = SubstitutionModelGradientFiniteDifference(
+          func, fat_beagle, tree, subst_model, SubstitutionModel::rates_key_,
+          param_vector, delta, StickBreakingTransform());
+    } else {
+      rates_grad = SubstitutionModelGradientFiniteDifference(
+          func, fat_beagle, tree, subst_model, SubstitutionModel::rates_key_,
+          param_vector, delta);
+    }
+  }
+  // Compile results.
+  return std::make_pair(rates_grad, freqs_grad);
 }
 
-PhyloGradient FatBeagle::Gradient(const UnrootedTree &in_tree) const {
+PhyloGradient FatBeagle::Gradient(const UnrootedTree &in_tree,
+                                  std::optional<PhyloFlags> flags) const {
   auto tree = in_tree.Detrifurcate();
   tree.SlideRootPosition();
   EigenMatrixXd dQ =
@@ -493,8 +532,15 @@ PhyloGradient FatBeagle::Gradient(const UnrootedTree &in_tree) const {
   // Calculate substitution model parameter gradient, if needed.
   if (phylo_model_->GetSubstitutionModel()->GetRates().size() > 0) {
     FatBeagle *mutable_this = const_cast<FatBeagle *>(this);
-    gradient["substitution_model"] = SubstitutionModelGradient<UnrootedTree>(
+
+    auto [rates_grad, freqs_grad] = SubstitutionModelGradient<UnrootedTree>(
         FatBeagle::StaticUnrootedLogLikelihood, mutable_this, in_tree);
+    auto model_grad = std::vector<double>();
+    model_grad.insert(model_grad.end(), rates_grad.begin(), rates_grad.end());
+    model_grad.insert(model_grad.end(), freqs_grad.begin(), freqs_grad.end());
+    gradient[PhyloGradient::substitution_model_key_] = model_grad;
+    gradient[PhyloGradient::substitution_model_rates_key_] = rates_grad;
+    gradient[PhyloGradient::substitution_model_frequencies_key_] = freqs_grad;
   }
 
   auto site_model = phylo_model_->GetSiteModel();
@@ -506,59 +552,87 @@ PhyloGradient FatBeagle::Gradient(const UnrootedTree &in_tree) const {
                                   phylo_model_->GetSiteModel()->GetRateGradient());
     auto [log_likelihood, unscaled_category_gradient] =
         BranchGradientInternals(tree.Topology(), tree.BranchLengths(), dQ);
-    std::ignore = log_likelihood;
-    gradient["site_model"] =
+    gradient[PhyloGradient::site_model_key_] =
         DiscreteSiteModelGradient(tree.BranchLengths(), unscaled_category_gradient);
   }
 
   // We want the fixed node to have a zero gradient.
   branch_length_gradient[tree.Topology()->Children()[1]->Id()] = 0.;
-  gradient["branch_lengths"] = branch_length_gradient;
+  gradient[PhyloGradient::branch_lengths_key_] = branch_length_gradient;
 
   return {log_likelihood, gradient};
 }
 
-PhyloGradient FatBeagle::Gradient(const RootedTree &tree) const {
+PhyloGradient FatBeagle::Gradient(const RootedTree &tree,
+                                  std::optional<PhyloFlags> flags) const {
   // Scale time with clock rate.
   std::vector<double> branch_lengths = tree.BranchLengths();
   const std::vector<double> &rates = tree.GetRates();
   for (size_t i = 0; i < tree.BranchLengths().size() - 1; i++) {
     branch_lengths[i] *= rates[i];
   }
-
   // Calculate branch length gradient and log likelihood.
   EigenMatrixXd dQ =
       BuildDifferentialMatrices(*phylo_model_->GetSubstitutionModel(),
                                 phylo_model_->GetSiteModel()->GetCategoryRates());
   auto [log_likelihood, branch_gradient] =
       BranchGradientInternals(tree.Topology(), branch_lengths, dQ);
-
   GradientMap gradient;
-
-  gradient["branch_lengths"] = branch_gradient;
-  // Calculate substitution model parameter gradient, if needed.
-  if (phylo_model_->GetSubstitutionModel()->GetRates().size() > 0) {
-    FatBeagle *mutable_this = const_cast<FatBeagle *>(this);
-    gradient["substitution_model"] = SubstitutionModelGradient<RootedTree>(
-        FatBeagle::StaticRootedLogLikelihood, mutable_this, tree);
+  gradient[PhyloGradient::branch_lengths_key_] = branch_gradient;
+  // Calculate Substitution Model Gradients (Rates and/or Frequencies), if flagged for.
+  bool do_subst_grad = PhyloFlags::IsFlagChecked(
+      flags, PhyloFlags::gradient_options_.substitution_model_);
+  bool do_rates_grad = PhyloFlags::IsFlagChecked(
+      flags, PhyloFlags::gradient_options_.substitution_model_rates_);
+  bool do_freqs_grad = PhyloFlags::IsFlagChecked(
+      flags, PhyloFlags::gradient_options_.substitution_model_frequencies_);
+  if (do_subst_grad || do_rates_grad || do_freqs_grad) {
+    if (phylo_model_->GetSubstitutionModel()->GetRates().size() > 0) {
+      FatBeagle *mutable_this = const_cast<FatBeagle *>(this);
+      double (*func)(FatBeagle *, const RootedTree &, std::optional<PhyloFlags>) =
+          &FatBeagle::StaticRootedLogLikelihood;
+      auto [rates_grad, freqs_grad] =
+          SubstitutionModelGradient<RootedTree>(func, mutable_this, tree, flags);
+      if (do_rates_grad) {
+        gradient[PhyloGradient::substitution_model_rates_key_] = rates_grad;
+      }
+      if (do_freqs_grad) {
+        gradient[PhyloGradient::substitution_model_frequencies_key_] = freqs_grad;
+      }
+      if (do_subst_grad) {
+        auto model_grad = std::vector<double>();
+        model_grad.insert(model_grad.end(), rates_grad.begin(), rates_grad.end());
+        model_grad.insert(model_grad.end(), freqs_grad.begin(), freqs_grad.end());
+        gradient[PhyloGradient::substitution_model_key_] = model_grad;
+      }
+    }
   }
-
-  // Calculate site model parameter gradient, if needed.
-  auto site_model = phylo_model_->GetSiteModel();
-  size_t category_count = site_model->GetCategoryCount();
-
-  if (category_count > 1) {
-    EigenMatrixXd dQ =
-        BuildDifferentialMatrices(*phylo_model_->GetSubstitutionModel(),
-                                  phylo_model_->GetSiteModel()->GetRateGradient());
-    auto [log_likelihood, unscaled_category_gradient] =
-        BranchGradientInternals(tree.Topology(), branch_lengths, dQ);
-    std::ignore = log_likelihood;
-    gradient["site_model"] =
-        DiscreteSiteModelGradient(branch_lengths, unscaled_category_gradient);
+  // Calculate Site Model Parameter Gradient, if flagged for.
+  if (PhyloFlags::IsFlagChecked(flags,
+                                PhyloFlags::gradient_options_.site_model_parameters_)) {
+    auto site_model = phylo_model_->GetSiteModel();
+    size_t category_count = site_model->GetCategoryCount();
+    if (category_count > 1) {
+      EigenMatrixXd dQ =
+          BuildDifferentialMatrices(*phylo_model_->GetSubstitutionModel(),
+                                    phylo_model_->GetSiteModel()->GetRateGradient());
+      auto [log_likelihood, unscaled_category_gradient] =
+          BranchGradientInternals(tree.Topology(), branch_lengths, dQ);
+      gradient[PhyloGradient::site_model_key_] =
+          DiscreteSiteModelGradient(branch_lengths, unscaled_category_gradient);
+    }
   }
-  gradient["ratios_root_height"] = RatioGradientOfBranchGradient(tree, branch_gradient);
-  gradient["clock_model"] = ClockGradient(tree, branch_gradient);
+  // Calculate the Ratio Gradient of Branch Gradient.
+  if (PhyloFlags::IsFlagChecked(flags,
+                                PhyloFlags::gradient_options_.ratios_root_height_)) {
+    gradient[PhyloGradient::ratios_root_height_key_] =
+        RatioGradientOfBranchGradient(tree, branch_gradient, flags);
+  }
+  // Calculate the Clock Rate Gradient.
+  if (PhyloFlags::IsFlagChecked(flags,
+                                PhyloFlags::gradient_options_.clock_model_rates_)) {
+    gradient[PhyloGradient::clock_model_key_] = ClockGradient(tree, branch_gradient);
+  }
 
   return {log_likelihood, gradient};
 }

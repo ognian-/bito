@@ -1,15 +1,18 @@
 // Copyright 2019-2021 bito project contributors.
 // bito is free software under the GPLv3; see LICENSE file for details.
 //
-// Calculation of the ratio and root height gradient, adpated from BEAST.
+// Calculation of the ratio and root height gradient, adapted from BEAST.
 // https://github.com/beast-dev/beast-mcmc
 // Credit to Xiang Ji and Marc Suchard.
 //
 // Because this is code adapted from elsewhere, at least for the time being the naming
 // conventions are a little different: pascalCase is allowed for variables.
 
+#include "rooted_gradient_transforms.hpp"
+
 #include <numeric>
 
+#include "phylo_flags.hpp"
 #include "rooted_tree.hpp"
 
 // \partial{L}/\partial{t_k} = \sum_j \partial{L}/\partial{b_j}
@@ -99,6 +102,7 @@ std::vector<double> UpdateGradientUnWeightedLogDensity(
   return ratiosGradientUnweightedLogDensity;
 }
 
+// Update height parameters
 double UpdateHeightParameterGradientUnweightedLogDensity(
     const RootedTree &tree, const std::vector<double> &gradient) {
   size_t leaf_count = tree.LeafCount();
@@ -129,44 +133,91 @@ double UpdateHeightParameterGradientUnweightedLogDensity(
   return sum;
 }
 
+std::vector<double> GradientLogDeterminantJacobian(const RootedTree &tree) {
+  size_t leaf_count = tree.LeafCount();
+  size_t root_id = tree.Topology()->Id();
+
+  std::vector<double> log_time = GetLogTimeArray(tree);
+
+  std::vector<double> gradient_log_jacobian_determinant =
+      UpdateGradientUnWeightedLogDensity(tree, log_time);
+
+  gradient_log_jacobian_determinant[root_id - leaf_count] =
+      UpdateHeightParameterGradientUnweightedLogDensity(tree, log_time);
+
+  for (size_t i = 0; i < gradient_log_jacobian_determinant.size() - 1; i++) {
+    gradient_log_jacobian_determinant[i] -= 1.0 / tree.height_ratios_[i];
+  }
+
+  return gradient_log_jacobian_determinant;
+}
+
 std::vector<double> RatioGradientOfHeightGradient(
     const RootedTree &tree, const std::vector<double> &height_gradient) {
   size_t leaf_count = tree.LeafCount();
   size_t root_id = tree.Topology()->Id();
 
   // Calculate node ratio gradient
-  std::vector<double> gradientLogDensity =
+  std::vector<double> gradient_log_density =
       UpdateGradientUnWeightedLogDensity(tree, height_gradient);
 
   // Calculate root height gradient
-  gradientLogDensity[root_id - leaf_count] =
+  gradient_log_density[root_id - leaf_count] =
       UpdateHeightParameterGradientUnweightedLogDensity(tree, height_gradient);
 
-  // Add gradient of log Jacobian determinant
-  std::vector<double> log_time = GetLogTimeArray(tree);
-
-  std::vector<double> gradientLogJacobianDeterminant =
-      UpdateGradientUnWeightedLogDensity(tree, log_time);
-  gradientLogJacobianDeterminant[root_id - leaf_count] =
-      UpdateHeightParameterGradientUnweightedLogDensity(tree, log_time);
-
-  for (size_t i = 0; i < gradientLogDensity.size() - 1; i++) {
-    gradientLogDensity[i] +=
-        gradientLogJacobianDeterminant[i] - 1.0 / tree.height_ratios_[i];
-  }
-
-  gradientLogDensity[root_id - leaf_count] +=
-      gradientLogJacobianDeterminant[root_id - leaf_count];
-
-  return gradientLogDensity;
+  return gradient_log_density;
 }
 
 std::vector<double> RatioGradientOfBranchGradient(
     const RootedTree &tree, const std::vector<double> &branch_gradient) {
+  size_t leaf_count = tree.LeafCount();
+  size_t root_id = tree.Topology()->Id();
+
   // Calculate node height gradient
   std::vector<double> height_gradient = HeightGradient(tree, branch_gradient);
 
-  return RatioGradientOfHeightGradient(tree, height_gradient);
+  // Calculate ratios and root height gradient
+  std::vector<double> gradient_log_density =
+      RatioGradientOfHeightGradient(tree, height_gradient);
+
+  // Calculate gradient of log Jacobian determinant
+  std::vector<double> gradient_log_jacobian_determinant =
+      GradientLogDeterminantJacobian(tree);
+
+  for (size_t i = 0; i < gradient_log_jacobian_determinant.size() - 1; i++) {
+    gradient_log_density[i] += gradient_log_jacobian_determinant[i];
+  }
+  gradient_log_density[root_id - leaf_count] +=
+      gradient_log_jacobian_determinant[root_id - leaf_count];
+
+  return gradient_log_density;
+}
+
+std::vector<double> RatioGradientOfBranchGradient(
+    const RootedTree &tree, const std::vector<double> &branch_gradient,
+    const std::optional<PhyloFlags> flags) {
+  size_t leaf_count = tree.LeafCount();
+  size_t root_id = tree.Topology()->Id();
+
+  // Calculate node height gradient
+  std::vector<double> height_gradient = HeightGradient(tree, branch_gradient);
+
+  // Calculate ratios and root height gradient
+  std::vector<double> gradient_log_density =
+      RatioGradientOfHeightGradient(tree, height_gradient);
+
+  if (PhyloFlags::IsFlagNotChecked(
+          flags, PhyloFlags::gradient_options_.exclude_log_det_jacobian_gradient_)) {
+    std::vector<double> gradient_log_jacobian_determinant =
+        GradientLogDeterminantJacobian(tree);
+    for (size_t i = 0; i < gradient_log_jacobian_determinant.size() - 1; i++) {
+      gradient_log_density[i] += gradient_log_jacobian_determinant[i];
+    }
+    gradient_log_density[root_id - leaf_count] +=
+        gradient_log_jacobian_determinant[root_id - leaf_count];
+  }
+
+  return gradient_log_density;
 }
 
 EigenVectorXd RatioGradientOfHeightGradientEigen(
@@ -184,4 +235,19 @@ EigenVectorXd RatioGradientOfHeightGradientEigen(
     eigen_output(i) = vector_output[i];
   }
   return eigen_output;
+}
+
+double LogDetJacobianHeightTransform(const RootedTree &tree) {
+  double log_det_jacobian = 0.0;
+  size_t leaf_count = tree.LeafCount();
+  tree.Topology()->TripleIdPreorderBifurcating(
+      [&log_det_jacobian, &tree, leaf_count](size_t node_id, size_t sister_id,
+                                             size_t parent_id) {
+        if (node_id >= leaf_count) {  // Only add to computation if node is not a leaf.
+          // Account for the jacobian of this branch's height transform.
+          log_det_jacobian +=
+              std::log(tree.node_heights_[parent_id] - tree.node_bounds_[node_id]);
+        }
+      });
+  return log_det_jacobian;
 }

@@ -38,6 +38,9 @@ using StringDoubleVector = std::vector<std::pair<std::string, double>>;
 using DoublePair = std::pair<double, double>;
 using SizePair = std::pair<size_t, size_t>;
 using SizeOptionVector = std::vector<std::optional<size_t>>;
+using BoolVector = std::vector<bool>;
+using DoubleVector = std::vector<double>;
+using PairDoubleVector = std::pair<DoubleVector, DoubleVector>;
 
 inline uint32_t MaxLeafIDOfTag(Tag tag) { return UnpackFirstInt(tag); }
 inline uint32_t LeafCountOfTag(Tag tag) { return UnpackSecondInt(tag); }

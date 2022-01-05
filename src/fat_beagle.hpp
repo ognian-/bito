@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "beagle_accessories.hpp"
+#include "phylo_flags.hpp"
 #include "phylo_model.hpp"
 #include "rooted_tree_collection.hpp"
 #include "site_pattern.hpp"
@@ -39,46 +40,65 @@ class FatBeagle {
   void SetParameters(const EigenVectorXdRef param_vector);
   void SetRescaling(const bool rescaling) { rescaling_ = rescaling; }
 
-  double LogLikelihood(const UnrootedTree &tree) const;
+  double LogLikelihood(const UnrootedTree &tree,
+                       std::optional<PhyloFlags> flags = std::nullopt) const;
   // This override performs a "classical" log likelihood calculation of a rooted tree
   // considered as an unrooted tree with no time-tree extras.
-  double UnrootedLogLikelihood(const RootedTree &tree) const;
-  double LogLikelihood(const RootedTree &tree) const;
+  double UnrootedLogLikelihood(const RootedTree &tree,
+                               std::optional<PhyloFlags> flags = std::nullopt) const;
+  double LogLikelihood(const RootedTree &tree,
+                       std::optional<PhyloFlags> flags = std::nullopt) const;
   // Compute first derivative of the log likelihood with respect to each branch
   // length, as a vector of first derivatives indexed by node id.
-  PhyloGradient Gradient(const UnrootedTree &tree) const;
-  PhyloGradient Gradient(const RootedTree &tree) const;
+  PhyloGradient Gradient(const UnrootedTree &tree,
+                         std::optional<PhyloFlags> flags = std::nullopt) const;
+  PhyloGradient Gradient(const RootedTree &tree,
+                         std::optional<PhyloFlags> flags = std::nullopt) const;
 
+  // ** Static Methods:
   // We can pass these static methods to FatBeagleParallelize.
-  static double StaticUnrootedLogLikelihood(FatBeagle *fat_beagle,
-                                            const UnrootedTree &in_tree);
+
+  static double StaticUnrootedLogLikelihood(
+      FatBeagle *fat_beagle, const UnrootedTree &in_tree,
+      std::optional<PhyloFlags> flags = std::nullopt);
   // This override performs a "classical" log likelihood calculation of a rooted tree
   // considered as an unrooted tree with no time-tree extras.
-  static double StaticUnrootedLogLikelihoodOfRooted(FatBeagle *fat_beagle,
-                                                    const RootedTree &in_tree);
-  static double StaticRootedLogLikelihood(FatBeagle *fat_beagle,
-                                          const RootedTree &in_tree);
-  static PhyloGradient StaticUnrootedGradient(FatBeagle *fat_beagle,
-                                              const UnrootedTree &in_tree);
-  static PhyloGradient StaticRootedGradient(FatBeagle *fat_beagle,
-                                            const RootedTree &in_tree);
+  static double StaticUnrootedLogLikelihoodOfRooted(
+      FatBeagle *fat_beagle, const RootedTree &in_tree,
+      std::optional<PhyloFlags> flags = std::nullopt);
+  static double StaticRootedLogLikelihood(
+      FatBeagle *fat_beagle, const RootedTree &in_tree,
+      std::optional<PhyloFlags> flags = std::nullopt);
+  static PhyloGradient StaticUnrootedGradient(
+      FatBeagle *fat_beagle, const UnrootedTree &in_tree,
+      std::optional<PhyloFlags> flags = std::nullopt);
+  static PhyloGradient StaticRootedGradient(
+      FatBeagle *fat_beagle, const RootedTree &in_tree,
+      std::optional<PhyloFlags> flags = std::nullopt);
+  static double StaticLogDetJacobianHeightTransform(
+      FatBeagle *fat_beagle, const RootedTree &in_tree,
+      std::optional<PhyloFlags> flags = std::nullopt);
 
+  // NOTE: Passed function `func()` is one of the following functions:
+  // - FatBeagle::StaticRootedLogLikelihood()
+  // - FatBeagle::StaticUnrootedLogLikelihood()
   template <typename TTree>
   std::vector<double> SubstitutionModelGradientFiniteDifference(
-      std::function<double(FatBeagle *, const TTree &)> f, FatBeagle *fat_beagle,
-      const TTree &tree, SubstitutionModel *subst_model,
+      std::function<double(FatBeagle *, const TTree &, std::optional<PhyloFlags>)> func,
+      FatBeagle *fat_beagle, const TTree &tree, SubstitutionModel *subst_model,
       const std::string &parameter_key, EigenVectorXd param_vector, double delta,
-      const Transform &transform) const;
+      std::optional<PhyloFlags> flags = std::nullopt) const;
   template <typename TTree>
   std::vector<double> SubstitutionModelGradientFiniteDifference(
-      std::function<double(FatBeagle *, const TTree &)> f, FatBeagle *fat_beagle,
-      const TTree &tree, SubstitutionModel *subst_model,
-      const std::string &parameter_key, EigenVectorXd param_vector, double delta) const;
-
+      std::function<double(FatBeagle *, const TTree &, std::optional<PhyloFlags>)> func,
+      FatBeagle *fat_beagle, const TTree &tree, SubstitutionModel *subst_model,
+      const std::string &parameter_key, EigenVectorXd param_vector, double delta,
+      const Transform &transform, std::optional<PhyloFlags> flags = std::nullopt) const;
   template <typename TTree>
-  std::vector<double> SubstitutionModelGradient(
-      std::function<double(FatBeagle *, const TTree &)> f, FatBeagle *fat_beagle,
-      const TTree &tree) const;
+  PairDoubleVector SubstitutionModelGradient(
+      std::function<double(FatBeagle *, const TTree &, std::optional<PhyloFlags>)> func,
+      FatBeagle *fat_beagle, const TTree &tree,
+      std::optional<PhyloFlags> flags = std::nullopt) const;
 
  private:
   using BeagleInstance = int;
@@ -124,10 +144,10 @@ class FatBeagle {
 
 template <typename TOut, typename TTree, typename TTreeCollection>
 std::vector<TOut> FatBeagleParallelize(
-    std::function<TOut(FatBeagle *, const TTree &)> f,
+    std::function<TOut(FatBeagle *, const TTree &, std::optional<PhyloFlags>)> func,
     const std::vector<std::unique_ptr<FatBeagle>> &fat_beagles,
     const TTreeCollection &tree_collection, EigenMatrixXdRef param_matrix,
-    const bool rescaling) {
+    const bool rescaling, std::optional<PhyloFlags> flags = std::nullopt) {
   if (fat_beagles.empty()) {
     Failwith("Please add some FatBeagles that can be used for computation.");
   }
@@ -141,16 +161,17 @@ std::vector<TOut> FatBeagleParallelize(
   for (size_t i = 0; i < tree_collection.TreeCount(); i++) {
     tree_number_queue.push(i);
   }
-  Assert(static_cast<Eigen::Index>(tree_collection.TreeCount()) == param_matrix.rows(),
+  Assert(int(tree_collection.TreeCount()) == param_matrix.rows(),
          "We param_matrix needs as many rows as we have trees.");
 
   TaskProcessor<FatBeagle *, size_t>(
       std::move(fat_beagle_queue), std::move(tree_number_queue),
-      [&results, &tree_collection, &param_matrix, &rescaling, &f](FatBeagle *fat_beagle,
-                                                                  size_t tree_number) {
+      [&results, &tree_collection, &param_matrix, &rescaling, &func, &flags](
+          FatBeagle *fat_beagle, size_t tree_number) {
         fat_beagle->SetParameters(param_matrix.row(tree_number));
         fat_beagle->SetRescaling(rescaling);
-        results[tree_number] = f(fat_beagle, tree_collection.GetTree(tree_number));
+        results[tree_number] =
+            func(fat_beagle, tree_collection.GetTree(tree_number), flags);
       });
 
   return results;

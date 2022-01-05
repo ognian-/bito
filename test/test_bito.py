@@ -3,12 +3,19 @@
 If you want to see the results of the print statements, use `pytest -s`.
 """
 
+
+def test_test():
+    print("TEST TEST")
+
+
+import sys
 import json
 import pprint
 import pytest
 import numpy as np
 import bito
 import bito.beagle_flags as beagle_flags
+import sys
 
 SIMPLE_SPECIFICATION = bito.PhyloModelSpecification(
     substitution="JC69", site="constant", clock="none"
@@ -109,8 +116,8 @@ def ds1_phylo_model_demo(inst):
     )
     inst.prepare_for_phylo_likelihood(gtr_specification, 2)
     phylo_model_param_block_map = inst.get_phylo_model_param_block_map()
-    phylo_model_param_block_map["substitution model rates"][:] = np.repeat(1.0 / 6, 6)
-    phylo_model_param_block_map["substitution model frequencies"][:] = 0.25
+    phylo_model_param_block_map["substitution_model_rates"][:] = np.repeat(1.0 / 6, 6)
+    phylo_model_param_block_map["substitution_model_frequencies"][:] = 0.25
     print("\nHere's a look at phylo_model_param_block_map:")
     pprint.pprint(phylo_model_param_block_map)
     print("\nWe can see that we are changing the phylo_model_params matrix:")
@@ -152,9 +159,95 @@ def rootings_indexer_test():
 
 def test_sbn_unrooted_instance():
     """Test the bito unrooted_instance."""
-
     hello_demo()
     sampling_and_indexers_demo()
     inst = ds1_support_test()
     ds1_phylo_model_demo(inst)
     rootings_indexer_test()
+
+
+def gradients_with_flags_demo():
+    # build instance
+    inst = bito.rooted_instance("cheese")
+    inst.read_newick_file("data/fluA.tree")
+    inst.read_fasta_file("data/fluA.fa")
+    inst.parse_dates_from_taxon_names(True)
+    spec = bito.PhyloModelSpecification(
+        substitution="GTR", site="weibull+4", clock="strict"
+    )
+    inst.prepare_for_phylo_likelihood(spec, 1, [beagle_flags.VECTOR_SSE], False)
+
+    # these are flags/options for gradient and likelihood functions.
+    import bito.phylo_flags as flags
+
+    # these are keys that correspond to parts of the phylo model block map.
+    import bito.phylo_keys as keys
+
+    # NOTE: flags and keys that have the same name have the same value.
+    # e.g. keys.SUBSTITUTION_MODEL == flags.SUBSTITUTION_MODEL
+
+    # initialize model parameters (with enums)
+    phylo_model_param_block_map = inst.get_phylo_model_param_block_map()
+    phylo_model_param_block_map[keys.SUBSTITUTION_MODEL_RATES][:] = np.repeat(1 / 6, 6)
+    phylo_model_param_block_map[keys.SUBSTITUTION_MODEL_FREQUENCIES][:] = np.repeat(
+        1 / 4, 4
+    )
+    phylo_model_param_block_map[keys.SITE_MODEL_PARAMETERS][:] = np.array([0.5])
+    phylo_model_param_block_map[keys.CLOCK_MODEL_RATES][:] = np.array([0.001])
+
+    # Request and calculate gradients for RATIOS_ROOT_HEIGHT,
+    # SUBSTITUTION_MODEL_FREQUENCIES, SUBSTITUTION_MODEL_RATES
+    bito_grad = inst.phylo_gradients(
+        # explicit flags: For flags that don't have associated values, can just be a list.
+        [
+            flags.RATIOS_ROOT_HEIGHT,
+            flags.SUBSTITUTION_MODEL_FREQUENCIES,
+            flags.SUBSTITUTION_MODEL_RATES,
+        ],
+        # run_with_default_flags:
+        # (1) If set to true, all fields of phylo_model_block_map are populated unless overriden by explicit flag.
+        # (2) If set to false, no fields of phylo_model_block_map are populated unless overriden by explicit flag.
+        False,
+    )[0]
+
+    print("bito_grad_keys: ", bito_grad.gradient.keys())
+    gtr_rates_grad = np.array(bito_grad.gradient[keys.SUBSTITUTION_MODEL_RATES])
+    gtr_freqs_grad = np.array(bito_grad.gradient[keys.SUBSTITUTION_MODEL_FREQUENCIES])
+    ratios_root_height = np.array(bito_grad.gradient[keys.RATIOS_ROOT_HEIGHT])
+
+    print("GTR rates gradient: \n", gtr_rates_grad)
+    print("GTR freqs gradient: \n", gtr_freqs_grad)
+    print("root height gradient: \n", ratios_root_height)
+
+    # above works if only boolean flags are used, otherwise:
+    bito_grad = inst.phylo_gradients(
+        # explicit flags: For SET flags that require value, use ordered tuples. Non-SET flags just take boolean.
+        [(flags.SET_GRADIENT_DELTA, 5.0)],
+        # run_with_default_flags
+        True,
+    )[0]
+
+    print("bito_grad_keys: ", bito_grad.gradient.keys())
+    gtr_rates_grad = np.array(bito_grad.gradient[keys.SUBSTITUTION_MODEL_RATES])
+    gtr_freqs_grad = np.array(bito_grad.gradient[keys.SUBSTITUTION_MODEL_FREQUENCIES])
+    ratios_root_height = np.array(bito_grad.gradient[keys.RATIOS_ROOT_HEIGHT])
+
+    print("GTR rates gradient: \n", gtr_rates_grad)
+    print("GTR freqs gradient: \n", gtr_freqs_grad)
+    # print('root height gradient: \n', ratios_root_height)
+
+    # This should trigger an exception because CLOCK_MODEL_RATES was not flagged to be computed.
+    try:
+        clock_grad = np.array(bito_grad.gradient[keys.CLOCK_MODEL_RATES])
+        print("CHECK_THROW Failed: Key error not caught.")
+    except:
+        print("CHECK_THROW Successful: Error successfully caught.")
+        print("ERROR: ", sys.exc_info()[0], "occurred.")
+
+    return inst
+
+
+# run tests if called directly
+if __name__ == "__main__":
+    test_sbn_unrooted_instance()
+    gradients_with_flags_demo()

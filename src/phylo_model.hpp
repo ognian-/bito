@@ -29,9 +29,9 @@ class PhyloModel : public BlockModel {
       const PhyloModelSpecification& specification);
   void SetParameters(const EigenVectorXdRef param_vector) override;
 
-  inline const static std::string entire_substitution_key_ = "entire substitution";
-  inline const static std::string entire_site_key_ = "entire site";
-  inline const static std::string entire_clock_key_ = "entire clock";
+  inline const static std::string entire_substitution_key_ = "entire_substitution";
+  inline const static std::string entire_site_key_ = "entire_site";
+  inline const static std::string entire_clock_key_ = "entire_clock";
 
  private:
   std::unique_ptr<SubstitutionModel> substitution_model_;

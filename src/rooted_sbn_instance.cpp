@@ -3,6 +3,7 @@
 
 #include "rooted_sbn_instance.hpp"
 
+#include "phylo_flags.hpp"
 #include "subsplit_dag.hpp"
 
 StringSet RootedSBNInstance::StringIndexerRepresentationOf(
@@ -45,13 +46,53 @@ std::vector<double> RootedSBNInstance::LogLikelihoods() {
   return GetEngine()->LogLikelihoods(tree_collection_, phylo_model_params_, rescaling_);
 }
 
+std::vector<double> RootedSBNInstance::LogLikelihoods(StringVector &flags,
+                                                      bool use_defaults) {
+  PhyloFlags flags_out = PhyloFlags(flags, use_defaults);
+  return LogLikelihoods(flags_out);
+}
+
+std::vector<double> RootedSBNInstance::LogLikelihoods(StringDoubleVector &flags,
+                                                      bool use_defaults) {
+  PhyloFlags flags_out = PhyloFlags(flags, use_defaults);
+  return LogLikelihoods(flags_out);
+}
+
+std::vector<double> RootedSBNInstance::LogLikelihoods(std::optional<PhyloFlags> flags) {
+  return GetEngine()->LogLikelihoods(tree_collection_, phylo_model_params_, rescaling_,
+                                     flags);
+}
+
 std::vector<double> RootedSBNInstance::UnrootedLogLikelihoods() {
   return GetEngine()->UnrootedLogLikelihoods(tree_collection_, phylo_model_params_,
                                              rescaling_);
 }
 
+std::vector<double> RootedSBNInstance::LogDetJacobianHeightTransform() {
+  return GetEngine()->LogDetJacobianHeightTransform(tree_collection_,
+                                                    phylo_model_params_, rescaling_);
+}
+
 std::vector<PhyloGradient> RootedSBNInstance::PhyloGradients() {
   return GetEngine()->Gradients(tree_collection_, phylo_model_params_, rescaling_);
+}
+
+std::vector<PhyloGradient> RootedSBNInstance::PhyloGradients(StringVector &flags,
+                                                             bool use_defaults) {
+  PhyloFlags flags_out = PhyloFlags(flags, use_defaults);
+  return PhyloGradients(flags_out);
+}
+
+std::vector<PhyloGradient> RootedSBNInstance::PhyloGradients(StringDoubleVector &flags,
+                                                             bool use_defaults) {
+  PhyloFlags flags_out = PhyloFlags(flags, use_defaults);
+  return PhyloGradients(flags_out);
+}
+
+std::vector<PhyloGradient> RootedSBNInstance::PhyloGradients(
+    std::optional<PhyloFlags> flags) {
+  return GetEngine()->Gradients(tree_collection_, phylo_model_params_, rescaling_,
+                                flags);
 }
 
 void RootedSBNInstance::ReadNewickFile(const std::string &fname) {

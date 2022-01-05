@@ -1150,10 +1150,6 @@ TEST_CASE("SubsplitDAGGraft: AddNodePair Equivalence Test") {
   nni_engine.SyncSetOfNNIsWithDAG();
   size_t nni_count = nni_engine.GetAdjacentNNICount();
   // Check DAG and Grafted DAG equal before adding any NNIs.
-  std::cout << "NODE_COUNTS: " << pre_dag.NodeCount() << "," << graft_dag.NodeCount()
-            << "," << graft_dag.GraftNodeCount() << std::endl;
-  std::cout << "EDGE_COUNTS: " << pre_dag.EdgeCountWithLeafSubsplits() << ","
-            << graft_dag.EdgeCount() << "," << graft_dag.GraftEdgeCount() << std::endl;
   CHECK_MESSAGE(SubsplitDAGGraft::CompareToDAG(graft_dag, pre_dag) == 0,
                 "DAG_GRAFT not equal to DAG before AddNodePair.");
 
@@ -1171,30 +1167,16 @@ TEST_CASE("SubsplitDAGGraft: AddNodePair Equivalence Test") {
               << std::endl;
     dag.AddNodePair(nni_to_add.parent_, nni_to_add.child_);
     graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
-    std::cout << "NODE_COUNTS: " << dag.NodeCount() << "," << graft_dag.NodeCount() << ","
-              << graft_dag.GraftNodeCount() << std::endl;
-    std::cout << "EDGE_COUNTS: " << dag.EdgeCountWithLeafSubsplits() << ","
-              << graft_dag.EdgeCount() << "," << graft_dag.GraftEdgeCount() << std::endl;
     CHECK_MESSAGE(SubsplitDAGGraft::CompareToDAG(graft_dag, dag) == 0,
                   "DAG_GRAFT not equal to DAG after AddNodePair");
     // Clear grafts from Grafted DAG.
     graft_dag.RemoveAllGrafts();
-    std::cout << "CLEAN_UP:" << std::endl;
-    std::cout << "NODE_COUNTS: " << pre_dag.NodeCount() << "," << graft_dag.NodeCount() << ","
-              << graft_dag.GraftNodeCount() << std::endl;
-    std::cout << "EDGE_COUNTS: " << pre_dag.EdgeCountWithLeafSubsplits() << ","
-              << graft_dag.EdgeCount() << "," << graft_dag.GraftEdgeCount() << std::endl;
     CHECK_MESSAGE(SubsplitDAGGraft::CompareToDAG(graft_dag, pre_dag) == 0,
                   "DAG_GRAFT not equal to DAG after RemoveAllGrafts");
-    std::cout << "---" << std::endl << std::endl;
   }
 
   // Check that cleared Grafted DAG is still equal to initial DAG.
   graft_dag.RemoveAllGrafts();
-  std::cout << "NODE_COUNTS: " << pre_dag.NodeCount() << "," << graft_dag.NodeCount()
-            << "," << graft_dag.GraftNodeCount() << std::endl;
-  std::cout << "EDGE_COUNTS: " << pre_dag.EdgeCountWithLeafSubsplits() << ","
-            << graft_dag.EdgeCount() << "," << graft_dag.GraftEdgeCount() << std::endl;
   CHECK_MESSAGE(SubsplitDAGGraft::CompareToDAG(graft_dag, pre_dag) == 0,
                 "DAG_GRAFT not equal to DAG after RemoveAllGrafts.");
 }

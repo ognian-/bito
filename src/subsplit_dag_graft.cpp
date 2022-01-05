@@ -61,6 +61,12 @@ int SubsplitDAGGraft::CompareToDAG(SubsplitDAGGraft &dag_a,
   // TODO: Add taxon translation.
   for (size_t i = 0; i < std::min(nodes_a.size(), nodes_b.size()); i++) {
     if (Bitset::Compare(nodes_a[i], nodes_b[i]) != 0) {
+      std::cout << "NODES NOT EQUAL" << std::endl;
+      auto [a_not_b, b_not_a] = BitsetVectorDiff(nodes_a, nodes_b);
+      std::cout << "nodes_a: " << std::endl << nodes_a << std::endl;
+      std::cout << "nodes_b: " << std::endl << nodes_b << std::endl;
+      std::cout << "NODES::a_not_b: " << std::endl << a_not_b << std::endl;
+      std::cout << "NODES::b_not_a: " << std::endl << b_not_a << std::endl;
       return Bitset::Compare(nodes_a[i], nodes_b[i]);
     }
   }
@@ -73,6 +79,21 @@ int SubsplitDAGGraft::CompareToDAG(SubsplitDAGGraft &dag_a,
   // TODO: Add taxon translation.
   for (int i = 0; i < std::min(edges_a.size(), edges_b.size()); i++) {
     if (Bitset::Compare(edges_a[i], edges_b[i]) != 0) {
+      std::cout << "EDGES NOT EQUAL" << std::endl;
+      auto [a_not_b, b_not_a] = BitsetVectorDiff(edges_a, edges_b);
+
+      std::cout << "EDGES::a_not_b: " << std::endl;
+      for (size_t i = 0; i < a_not_b.size(); i++) {
+        std::cout << a_not_b[i].EdgeToString() << ",";
+      }
+      std::cout << std::endl;
+
+      std::cout << "EDGES::b_not_a: " << std::endl;
+      for (size_t i = 0; i < b_not_a.size(); i++) {
+        std::cout << b_not_a[i].EdgeToString() << ",";
+      }
+      std::cout << std::endl;
+
       return Bitset::Compare(edges_a[i], edges_b[i]);
     }
   }
@@ -87,16 +108,19 @@ int SubsplitDAGGraft::CompareToDAG(SubsplitDAGGraft &dag_a,
 void SubsplitDAGGraft::CreateGraftNode(const Bitset &node_subsplit) {
   // Do not add node to DAG if already exists in DAG.
   bool node_exists_in_dag = host_dag_->ContainsNode(node_subsplit);
-  if (node_exists_in_dag) {
+  bool node_exists_in_graft = ContainsGraftNode(node_subsplit);
+  if (node_exists_in_dag || node_exists_in_graft) {
+    std::cout << "Node already exists: " << node_subsplit << std::endl;
     return;
   }
-  // Else, add node to graft node list.
+  std::cout << "Node inserted: " << node_subsplit << std::endl;
+  // else, add node to graft node list.
   size_t node_id = NodeCount();
   graft_nodes_.push_back(std::make_unique<SubsplitDAGNode>(node_id, node_subsplit));
   GetDAGNode(node_id)->SetBitset(node_subsplit);
-  // Insert node into subsplit map.
+  // insert node into subsplit map.
   SafeInsert(subsplit_to_id_, node_subsplit, node_id);
-  // Insert node's clades into clade map.
+  // insert node's clades into clade map.
   AddNodeToClades(node_id, node_subsplit);
 }
 
@@ -159,9 +183,9 @@ void SubsplitDAGGraft::DestroyGraftEdge(const Bitset &parent_subsplit,
 void SubsplitDAGGraft::AddGraftNodePair(const Bitset &parent_subsplit,
                                         const Bitset &child_subsplit) {
   std::cout << "__ADD_NODE_PAIR(before)__" << std::endl;
-  // Assert that at least one of the nodes are not in the host DAG.
-  const bool parent_is_new = !host_dag_->ContainsNode(parent_subsplit);
-  const bool child_is_new = !host_dag_->ContainsNode(child_subsplit);
+  // Assert that at least one of the nodes are not in the host DAG or graft DAG.
+  const bool parent_is_new = !(host_dag_->ContainsNode(parent_subsplit) || ContainsGraftNode(parent_subsplit));
+  const bool child_is_new = !(host_dag_->ContainsNode(child_subsplit) || ContainsGraftNode(child_subsplit));
   // Assert that parent and child are a valid node pair to add to DAG.
   if (host_dag_->IsValidAddNodePair(parent_subsplit, child_subsplit) == false) {
     Failwith("AddGraftNodePair(): Is not valid node pair.");
@@ -176,9 +200,13 @@ void SubsplitDAGGraft::AddGraftNodePair(const Bitset &parent_subsplit,
   // Find relationship between nodes.
   bool is_leftside = Bitset::SubsplitIsWhichChildOf(parent_subsplit, child_subsplit);
   // Add nodes.
-  CreateGraftNode(parent_subsplit);
+  if (parent_is_new) {
+    CreateGraftNode(parent_subsplit);
+  }
   const size_t parent_id = GetNodeId(parent_subsplit);
-  CreateGraftNode(child_subsplit);
+  if (child_is_new) {
+    CreateGraftNode(child_subsplit);
+  }
   const size_t child_id = GetNodeId(child_subsplit);
   // Find adjacent nodes and add edges.
   const auto [left_parents_of_parent, right_parents_of_parent] =
@@ -188,7 +216,7 @@ void SubsplitDAGGraft::AddGraftNodePair(const Bitset &parent_subsplit,
   const auto [left_children_of_parent, right_children_of_parent] =
       host_dag_->BuildChildIdVector(parent_subsplit);
   ConnectNodeToAdjacentHostNodes(parent_id, left_children_of_parent, true, true, child_id);
-  ConnectNodeToAdjacentHostNodes(parent_id, left_children_of_parent, true, false, child_id);
+  ConnectNodeToAdjacentHostNodes(parent_id, right_children_of_parent, true, false, child_id);
   const auto [left_parents_of_child, right_parents_of_child] =
       host_dag_->BuildParentIdVector(child_subsplit);
   ConnectNodeToAdjacentHostNodes(child_id, left_parents_of_child, false, true, parent_id);
@@ -199,7 +227,7 @@ void SubsplitDAGGraft::AddGraftNodePair(const Bitset &parent_subsplit,
   ConnectNodeToAdjacentHostNodes(child_id, right_children_of_child, true, false, parent_id);
   // Connect parent to child.
   CreateGraftEdge(parent_id, child_id);
-  std::cout << "__ADD_NODE_PAIR(before)__" << std::endl;
+  std::cout << "__ADD_NODE_PAIR(after)__" << std::endl;
 }
 
 void SubsplitDAGGraft::RemoveGraftNodePair(const Bitset &parent_subsplit,
@@ -210,7 +238,10 @@ void SubsplitDAGGraft::RemoveGraftNodePair(const Bitset &parent_subsplit,
 
 void SubsplitDAGGraft::RemoveAllGrafts() {
   graft_nodes_.clear();
+  bridge_nodes_.clear();
   graft_edges_.clear();
+  subsplit_to_id_.clear();
+  clade_to_ids_.clear();
 }
 
 void SubsplitDAGGraft::SortGraftNodes() {}

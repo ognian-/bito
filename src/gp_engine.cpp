@@ -55,6 +55,11 @@ void GPEngine::Initialize(SitePattern site_pattern, size_t plv_count,
   InitializePLVsWithSitePatterns();
 }
 
+void GPEngine::operator()(const GPOperations::ZeroPLV& op) {
+  plvs_.at(op.dest_).setZero();
+  rescaling_counts_(op.dest_) = 0;
+}
+
 void GPEngine::operator()(const GPOperations::SetToStationaryDistribution& op) {
   auto& plv = plvs_.at(op.dest_);
   for (size_t row_idx = 0; row_idx < plv.rows(); ++row_idx) {

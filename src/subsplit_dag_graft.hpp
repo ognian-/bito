@@ -126,16 +126,21 @@ class SubsplitDAGGraft {
 
   // ** Contains
 
-  // Checks whether the node is in the DAG or the graft.
+  // Checks whether the node is in the host DAG or the graft.
   bool ContainsNode(const Bitset node_subsplit) const;
   bool ContainsNode(const size_t node_id) const;
   // Checks whether the node is in the graft only.
   bool ContainsGraftNode(const Bitset node_subsplit) const;
   bool ContainsGraftNode(const size_t node_id) const;
-  // Checks whether the edge is in the DAG or the graft.
+  // Checks whether the edge is in the host only.
+  bool ContainsHostNode(const Bitset node_subsplit) const;
+  bool ContainsHostNode(const size_t node_id) const;
+  // Checks whether the edge is in the host DAG or the graft.
   bool ContainsEdge(const size_t parent_id, const size_t child_id) const;
   // Checks whether the edge is in the graft only.
   bool ContainsGraftEdge(const size_t parent_id, const size_t child_id) const;
+  // Checks whether the edge is in the host only.
+  bool ContainsHostEdge(const size_t parent_id, const size_t child_id) const;
 
   // ** Traversal
 

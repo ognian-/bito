@@ -110,16 +110,7 @@ GPEngine *GPInstance::GetEngine() const {
 
 bool GPInstance::HasEngine() const { return engine_ != nullptr; }
 
-// TODO:
-void GPInstance::UpdateEngineAfterModifyingDAG() {
-}
-
-void GPInstance::UpdateEngineAfterGraftingDAG() {
-}
-
-void ComputePerPCSPForAllNNI(Bitset parent_subsplit, Bitset child_subsplit) {
-
-}
+void ComputePerPCSPForAllNNI(Bitset parent_subsplit, Bitset child_subsplit) {}
 
 GPDAG &GPInstance::GetDAG() { return dag_; }
 
@@ -376,24 +367,35 @@ void GPInstance::SubsplitDAGToDot(const std::string &out_path, bool show_index_l
   out_stream.close();
 }
 
-void GPInstance::AddNodePair(const Bitset &parent_bitset, const Bitset &child_bitset) {
+SubsplitDAG::ModificationResult GPInstance::AddNodePair(const Bitset &parent_bitset, const Bitset &child_bitset) {
   // Add node pair to SubsplitDAG.
   auto node_addition_result = dag_.AddNodePair(parent_bitset, child_bitset);
   // Fetch the reorganized locations of nodes and edges (relative to before AddNodePair)
   auto node_reindexer = node_addition_result.node_reindexer;
   auto edge_reindexer = node_addition_result.edge_reindexer;
-  // Reindex data
-  // Reindexer::Reindex(, node_reindexer);
 
   // If NNI Evaluation Engine has been initialized, then update NNIs.
   if (nni_engine_) {
     nni_engine_->UpdateSetOfNNIsAfterDAGAddNodePair(parent_bitset, child_bitset);
   }
+
+  return node_addition_result;
 }
 
-void GPInstance::MakeNNIEngine() {
-  nni_engine_ = std::make_unique<NNIEvaluationEngine>(dag_);
-  nni_engine_->SyncSetOfNNIsWithDAG();
-}
+SubsplitDAG::ModificationResult GPInstance::AddGraftNodePair(const Bitset &parent_bitset,
+                                                             const Bitset &child_bitset) {}
+
+void GPInstance::UpdateEngineAfterModifyingDAG(const SizeVector &node_reindexer,
+                                               const SizeVector &edge_reindexer) {
+
+                                               }
+
+void GPInstance::UpdateEngineAfterGraftingDAG(const SizeVector &node_reindexer,
+                                              const SizeVector &edge_reindexer) {}
+
+void GPInstance::ComputePerNNIPerPCSPLikelihood(const Bitset &parent_bitset,
+                                                const Bitset &child_bitset) {}
+
+void GPInstance::MakeNNIEngine() {}
 
 size_t GPInstance::GetNNICount() { return nni_engine_->GetAdjacentNNICount(); }

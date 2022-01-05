@@ -5,6 +5,7 @@
 
 #include "optimization.hpp"
 #include "sugar.hpp"
+#include "reindexer.hpp"
 
 GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
                    const std::string& mmap_file_path, double rescaling_threshold,
@@ -54,6 +55,53 @@ void GPEngine::Initialize(SitePattern site_pattern, size_t plv_count,
                           EigenVectorXd inverted_sbn_prior) {
   InitializePLVsWithSitePatterns();
 }
+
+void GPEngine::UpdateAfterModifyingDAG(SitePattern site_pattern, const size_t old_plv_count, const size_t new_plv_count,
+                               const size_t old_gpcsp_count, const size_t new_gpcsp_count, const std::string& mmap_file_path,
+                               const SizeVector& node_reindexer,
+                               const SizeVector& edge_reindexer) {
+  size_t old_size, new_size;
+
+  // (1) Resize and Remap mmapped data.
+  // Update mmapping size so it can store new nodes.
+  // old_size = old_plv_count;
+  // MmappedNucleotidePLV *old_mmapped_master_plv = &mmapped_master_plv_;
+  // NucleotidePLVRefVector *old_plvs = &plvs_;
+  // MmappedNucleotidePLV *new_mmapped_master_plv =
+  //     &MmappedNucleotidePLV(mmap_file_path, new_plv_count * site_pattern.PatternCount());
+  // NucleotidePLVRefVector *new_plvs = &(new_mmapped_master_plv->Subdivide(plv_count_));
+  // // Remap data according to new indexing of nodes.
+  // for (size_t i = 0; i < old_size; i++) {
+  //   size_t old_index = i;
+  //   size_t new_index = node_reindexer[i];
+  //   *new_plvs.at(new_index) = *old_plvs.at(old_index);
+  // }
+  
+  // (2) Resize and Remap data for branch lengths.
+  // Update data vector sizes for new nodes in DAG.
+  old_size = branch_lengths_.size();
+  EigenVectorXd old_data_vector(branch_lengths_);
+  branch_lengths_.resize(new_gpcsp_count);
+  branch_lengths_.setConstant(DOUBLE_NEG_INF);
+  new_size = branch_lengths_.size();
+  // Remap data according to new indexing of edges.
+  for (size_t i = 0; i < old_size; i++) {
+    size_t old_index = i;
+    size_t new_index = edge_reindexer[i];
+    branch_lengths_[new_index] = old_data_vector[old_index];
+  }
+
+  // (3) Resize and Remap data for log likelihoods.
+  log_likelihoods_.resize(new_gpcsp_count, site_pattern_.PatternCount());
+  // (4) Resize and Remap data for branch lengths.
+  hybrid_marginal_log_likelihoods_.resize(new_gpcsp_count);
+}
+
+void UpdateAfterGraftingDAG(SitePattern site_pattern, size_t plv_count,
+                            size_t gpcsp_count, const std::string& mmap_file_path,
+                            const std::string& graft_mmap_file_path) {}
+
+void ComputePerNNIPerPCSPLikelihood(const size_t parent_node_id, const size_t child_node_id) {}
 
 void GPEngine::operator()(const GPOperations::ZeroPLV& op) {
   plvs_.at(op.dest_).setZero();

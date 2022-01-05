@@ -24,8 +24,9 @@ class SubsplitDAGNode {
  public:
   SubsplitDAGNode(size_t id, Bitset subsplit)
       : id_(id), subsplit_(std::move(subsplit)) {
-        // std::cout << "MAKE_NEW_DAG_NODE => " << id_ << " : " << subsplit_.SubsplitToString() << std::endl;
-      }
+    // std::cout << "MAKE_NEW_DAG_NODE => " << id_ << " : " <<
+    // subsplit_.SubsplitToString() << std::endl;
+  }
 
   // Compare SubsplitDAGNode's by their ids.
   static int Compare(const SubsplitDAGNode &node_a, const SubsplitDAGNode &node_b);
@@ -78,18 +79,20 @@ class SubsplitDAGNode {
     is_leftside ? RemoveRootwardLeftside(adjacent_node_id)
                 : RemoveRootwardRightside(adjacent_node_id);
   }
-  void RemoveLeafwardLeftside(size_t node_id) { leafward_leftside_.push_back(node_id); }
+  void RemoveLeafwardLeftside(size_t node_id) { 
+    leafward_leftside_.push_back(node_id); }
   void RemoveLeafwardRightside(size_t node_id) {
     leafward_rightside_.push_back(node_id);
   }
-  void RemoveRootwardLeftside(size_t node_id) { rootward_leftside_.push_back(node_id); }
+  void RemoveRootwardLeftside(size_t node_id) { 
+    rootward_leftside_.push_back(node_id); }
   void RemoveRootwardRightside(size_t node_id) {
     rootward_rightside_.push_back(node_id);
   }
 
   // #350 use enumerated types for rotated?
   // Get vector of all adjacent node vectors along the specified direction.
-  const SizeVector GetEdge(bool is_leafward, bool is_leftside) {
+  const SizeVector GetEdge(bool is_leafward, bool is_leftside) const {
     if (is_leafward) {
       return (is_leftside ? GetLeafwardLeftside() : GetLeafwardRightside());
     } else {
@@ -116,6 +119,12 @@ class SubsplitDAGNode {
     Reindexer::RemapIdVector(rootward_leftside_, node_reindexer);
     Reindexer::RemapIdVector(rootward_rightside_, node_reindexer);
   }
+
+  // TODO:
+  // Check if given DAGNode is connected to this DAGNode (in any direction).
+  bool IsNodeConnected(const size_t node_id) const;
+  // Check if node is connected, with relation specified. 
+  bool IsNodeConnected(const size_t node_id, const bool is_leafward, const bool is_leftside) const;
 
   // Check if node is in a valid state for the SubsplitDAG.
   // To be valid, a node must have at least one parent, one left child, and one right

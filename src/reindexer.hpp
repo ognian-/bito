@@ -20,6 +20,9 @@
 
 #include "eigen_sugar.hpp"
 #include "sugar.hpp"
+#include "bitset.hpp"
+
+using ReindexVector = SizeVector;
 
 namespace Reindexer {
 // These operations are for working with reindexers.
@@ -74,6 +77,36 @@ inline VectorType Reindex(VectorType &old_vector, const SizeVector &reindexer,
     new_vector[reindexer[old_vector.size() + idx]] = std::move(additional_values[idx]);
   }
   return new_vector;
+}
+
+// TODO: Work in Progress
+// Reindexes the given vector of given datatype according to the reindexer, done in place with bool checking.
+template <typename VectorType, typename DataType>
+inline void ReindexInPlace(VectorType &data_vector, const SizeVector &reindexer, std::optional<DataType> fill_value = std::nullopt) {
+  size_t old_size = data_vector.size();
+  size_t new_size = reindexer.size();
+  Bitset is_reindexed(new_size);
+  data_vector.resize(new_size);
+  if (fill_value.has_value()) {
+    for (size_t i = old_size; i < new_size; i++) {
+      data_vector[i] = *fill_value;
+    }
+  }
+  for (size_t i = 0; i < new_size; i++) {
+    size_t old_index;
+    size_t new_index = i;
+    DataType old_swap_value = data_vector[new_index];
+    DataType new_swap_value;
+    while (is_reindexed[new_index] != true) {
+      old_index = new_index;
+      new_index = reindexer[old_index];
+      // Push current value from old index to new index, and save overwritten value.
+      new_swap_value = data_vector[new_index];
+      data_vector[new_index] = old_swap_value;
+      old_swap_value = new_swap_value;
+      is_reindexed[old_index] = true;
+    } 
+  }
 }
 
 // Gets the inverse of a given reindexer.

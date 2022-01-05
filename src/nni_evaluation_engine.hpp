@@ -87,7 +87,6 @@ class NNIEvaluationEngine {
   SetOfNNIs adjacent_nnis_;
   GPDAG nni_partial_dag_;
   RankedSetOfNNIs ranked_nnis_;
-  // SubsplitDAGGraft proposed_nni_;
 };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

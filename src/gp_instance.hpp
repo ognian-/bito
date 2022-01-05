@@ -101,10 +101,6 @@ class GPInstance {
   // TODO:
   // ** NNI Evaluation Engine
 
-  // Add parent-child node pair to dag and reorganize underlying data.
-  void AddNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
-  void GraftNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
-
   // Initialize NNI Evaluation Engine.
   void MakeNNIEngine();
   // Get NNI Evaluation Engine.
@@ -112,11 +108,20 @@ class GPInstance {
   // Get the number of adjacent NNI's for current DAG.
   size_t GetNNICount();
 
-  // Initialize
+  // Add NNI pair.
+  SubsplitDAG::ModificationResult AddNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
+  SubsplitDAG::ModificationResult AddGraftNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
+  // Update engine.
+  void UpdateEngineAfterModifyingDAG(const SizeVector &node_reindexer,
+                                     const SizeVector &edge_reindexer);
+  void UpdateEngineAfterGraftingDAG(const SizeVector &node_reindexer,
+                                    const SizeVector &edge_reindexer);
+  // Compute Marginal Likelihood for NNI.
+  void ComputePerNNIPerPCSPLikelihood(const Bitset &parent_bitset, const Bitset &child_bitset);
+  void ComputePerNNIPerPCSPLikelihood(const SubsplitDAGNode &parent_node, const SubsplitDAGNode &child_node);
+
+  // Initialize graft dag.
   void MakeGraftDAG();
-  // After adding NNI a graft to the grafted DAG, update engine to accomodate new PLVs.
-  void UpdateEngineAfterModifyingDAG();
-  void UpdateEngineAfterGraftingDAG();
 
   // ** Alignment
 
@@ -142,10 +147,9 @@ class GPInstance {
   GPDAG dag_;
   static constexpr size_t plv_count_per_node_ = 6;
 
-  // TODO: NNI Evaluation Engine 
-  std::unique_ptr<NNIEvaluationEngine> nni_engine_;
-  // NNIEvaluationEngine nni_engine_;
-  // SubsplitDAGGraft graft_dag_;
+  // TODO: NNI Evaluation Engine
+  std::optional<NNIEvaluationEngine> nni_engine_ = std::nullopt;
+  std::optional<SubsplitDAGGraft> graft_dag_ = std::nullopt;
   std::string graft_mmap_file_path_;
 };
 

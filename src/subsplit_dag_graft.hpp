@@ -57,16 +57,16 @@ class SubsplitDAGGraft {
   // ** Modify DAG
 
   // Add node pair to graft.
-  void AddGraftNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
+  SubsplitDAG::ModificationResult AddGraftNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
   // TODO:
   // Remove node pair from graft.
-  void RemoveGraftNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
+  SubsplitDAG::ModificationResult RemoveGraftNodePair(const Bitset &parent_subsplit, const Bitset &child_subsplit);
   // TODO:
   // Clear all nodes and edges from graft for reuse.
   void RemoveAllGrafts();
   // TODO:
-  // Create sorted list of all node in graft.
-  void SortGraftNodes();
+  // Create sorted list of all node in graft. Returns node reindexer.
+  SizeVector SortGraftNodes();
 
   // ** Clades
 
@@ -180,11 +180,10 @@ class SubsplitDAGGraft {
   void DestroyGraftEdge(const size_t parent_id, const size_t child_id);
   void DestroyGraftEdge(const size_t edge_idx);
   // Connect main node to all adjacent nodes in vector.
-  void ConnectNodeToAdjacentHostNodes(const size_t main_node_id,
-                                  const SizeVector adjacent_node_ids,
-                                  const bool is_main_node_parent,
-                                  const bool is_left_child,
-                                  std::optional<size_t> ignored_node_id_opt = std::nullopt);
+  void ConnectNodeToAdjacentHostNodes(
+      const size_t main_node_id, const SizeVector adjacent_node_ids,
+      const bool is_main_node_parent, const bool is_left_child,
+      std::optional<size_t> ignored_node_id_opt = std::nullopt);
 };
 
 #endif  // SRC_SUBSPLIT_DAG_GRAFT_HPP

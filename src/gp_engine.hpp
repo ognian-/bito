@@ -21,6 +21,7 @@
 
 class GPEngine {
  public:
+  //
   GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
            const std::string& mmap_file_path, double rescaling_threshold,
            EigenVectorXd sbn_prior, EigenVectorXd unconditional_node_probabilities,
@@ -44,14 +45,6 @@ class GPEngine {
                   EigenVectorXd sbn_prior,
                   EigenVectorXd unconditional_node_probabilities,
                   EigenVectorXd inverted_sbn_prior);
-
-  // TODO: Update after modify/grafting DAG.
-  // Resize data members to store SubsplitDAG after modification.
-  void UpdateAfterModifyingDAG(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
-                               const std::string& mmap_file_path);
-  // Append new data members to store SubsplitDAG growth after modification.
-  void UpdateAfterGraftingDAG(SitePattern site_pattern, size_t plv_count,
-                              size_t gpcsp_count, const std::string& mmap_file_path, const std::string& graft_mmap_file_path);
 
   // Apply all operations in vector in order from beginning to end.
   void ProcessOperations(GPOperationVector operations);
@@ -101,6 +94,19 @@ class GPEngine {
   // (host) SubsplitDAG but have not been formally indexed into the data structure.
   // These functions can operate on the DAG and the graft as if they were a singular
   // object.
+
+  // TODO: Update after modify/grafting DAG.
+  // Resize data members to store SubsplitDAG after modification.
+  void UpdateAfterModifyingDAG(SitePattern site_pattern, const size_t old_plv_count, const size_t new_plv_count,
+                               const size_t old_gpcsp_count, const size_t new_gpcsp_count, const std::string& mmap_file_path,
+                               const SizeVector& node_reindexer,
+                               const SizeVector& edge_reindexer);
+  // Append new data members to store SubsplitDAG growth after modification.
+  void UpdateAfterGraftingDAG(SitePattern site_pattern, size_t plv_count,
+                              size_t gpcsp_count, const std::string& mmap_file_path,
+                              const std::string& graft_mmap_file_path);
+  // 
+  void ComputePerNNIPerPCSPLikelihood(const size_t parent_node_id, const size_t child_node_id);
 
   // Calculate a vector of likelihoods, one for each summand of the hybrid marginal.
   EigenVectorXd CalculateQuartetHybridLikelihoodsWithGraft(
@@ -165,7 +171,6 @@ class GPEngine {
   }
 
  public:
-  // TODO
   static constexpr double default_rescaling_threshold_ = 1e-40;
   // Initial branch length during first branch length opimization.
   static constexpr double default_branch_length_ = 0.1;

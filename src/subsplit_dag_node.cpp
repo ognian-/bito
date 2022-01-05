@@ -20,6 +20,26 @@ std::string GetNeighborString(SizeVector neighbors) {
   return str;
 }
 
+bool SubsplitDAGNode::IsNodeConnected(const size_t node_id) const {
+  for (const bool is_leafward : {true, false}) {
+    for (const bool is_leftside : {true, false}) {
+      if (IsNodeConnected(node_id, is_leafward, is_leftside)) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+bool SubsplitDAGNode::IsNodeConnected(const size_t node_id, const bool is_leafward, const bool is_leftside) const {
+  for (const auto& adj_node_id : GetEdge(is_leafward, is_leftside)) {
+    if (adj_node_id == node_id) {
+      return true;
+    }
+  }
+  return false;
+};
+
 bool SubsplitDAGNode::IsValid() const {
   // If node is a leaf, then a valid node should have no parents.
   if (IsLeaf()) {

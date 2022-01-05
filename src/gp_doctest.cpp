@@ -1184,48 +1184,44 @@ TEST_CASE("SubsplitDAGGraft: AddNodePair Equivalence Test") {
 // TODO: Work in Progress
 // Check that Grafted SubsplitDAG
 TEST_CASE("SubsplitDAGGraft: PerPCSP Likelihood Test.") {
+  // Simple DAG that contains a shared edge, internal leafward fork, and an internal
+  // rootward fork.
+  const std::string fasta_path = "data/six_taxon.fasta";
+  const std::string newick_path = "data/six_taxon_rooted_simple.nwk";
+  // Instance that will be unaltered.
+  auto pre_inst = GPInstanceOfFiles(fasta_path, newick_path);
+  GPDAG& pre_dag = pre_inst.GetDAG();
+  // Instance that is used by grafted DAG.
+  auto inst_to_graft = GPInstanceOfFiles(fasta_path, newick_path);
+  GPDAG& dag_to_graft = inst_to_graft.GetDAG();
+  SubsplitDAGGraft graft_dag = SubsplitDAGGraft(dag_to_graft);
+  // Instance that will be altered.
+  auto inst = GPInstanceOfFiles(fasta_path, newick_path);
+  GPDAG& dag = inst.GetDAG();
+
+  // Find all viable NNIs for DAG.
+  auto nni_engine = NNIEvaluationEngine(pre_dag);
+  nni_engine.SyncSetOfNNIsWithDAG();
+  size_t nni_count = nni_engine.GetAdjacentNNICount();
+
+  // Compute Likelihoods of unaltered DAG.
+  inst.PopulatePLVs();
+  inst.ComputeLikelihoods();
+  EigenVectorXd realized_log_likelihoods =
+      inst.GetEngine()->GetPerGPCSPLogLikelihoods();
+  inst_to_graft.PopulatePLVs();
+  inst_to_graft.ComputeLikelihoods();
+  EigenVectorXd grafted_realized_log_likelihoods =
+      inst_to_graft.GetEngine()->GetPerGPCSPLogLikelihoods();
   
-  // // Simple DAG that contains a shared edge, internal leafward fork, and an internal
-  // // rootward fork.
-  // const std::string fasta_path = "data/six_taxon.fasta";
-  // const std::string newick_path = "data/six_taxon_rooted_simple.nwk";
-  // // Instance that will be unaltered.
-  // auto pre_inst = GPInstanceOfFiles(fasta_path, newick_path);
-  // GPDAG& pre_dag = pre_inst.GetDAG();
-  // // Instance that is used by grafted DAG.
-  // auto inst_to_graft = GPInstanceOfFiles(fasta_path, newick_path);
-  // GPDAG& dag_to_graft = inst_to_graft.GetDAG();
-  // SubsplitDAGGraft graft_dag = SubsplitDAGGraft(dag_to_graft);
-  // // inst_to_graft.SetGraftDAG();
-  // // Instance that will be altered.
-  // auto inst = GPInstanceOfFiles(fasta_path, newick_path);
-  // GPDAG& dag = inst.GetDAG();
-  // // Find all viable NNIs for DAG.
-  // auto nni_engine = NNIEvaluationEngine(pre_dag);
-  // nni_engine.SyncSetOfNNIsWithDAG();
-  // size_t nni_count = nni_engine.GetAdjacentNNICount();
-  // // Compute Likelihoods of unaltered DAG.
-  // inst.PopulatePLVs();
-  // inst.ComputeLikelihoods();
-  // EigenVectorXd realized_log_likelihoods =
-  //     inst.GetEngine()->GetPerGPCSPLogLikelihoods();
-  // inst_to_graft.PopulatePLVs();
-  // inst_to_graft.ComputeLikelihoods();
-  // EigenVectorXd grafted_realized_log_likelihoods =
-  //     inst_to_graft.GetEngine()->GetPerGPCSPLogLikelihoods();
-  // // Add an NNI.
-  // auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(0);
-  // auto dag_modifications = dag.AddNodePair(nni_to_add.parent_, nni_to_add.child_);
-  // graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
-  // // Reinitialize Engine with added NNI.
-  // // inst.GetEngine()->ResizeAfterModifyingDAG();
-  // // inst_to_graft.GetEngine()->ResizeAfterGraftingDAG();
-  // // Compute NNI PLVs.
-  // for (size_t i = 0; i < nni_count; i++) {
-  //   auto nni = nni_engine.GetNNIFromAdjacentNNIs(i);
-  //   Bitset parent_nni = nni.parent_;
-  //   Bitset child_nni = nni.child_;
-  // }
+  // Add an NNI.
+  auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(0);
+  auto dag_modifications = dag.AddNodePair(nni_to_add.parent_, nni_to_add.child_);
+  auto graft_modifications = graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
+  // Update Engine with added NNI.
+  inst.UpdateEngineAfterModifyingDAG(dag_modifications.node_reindexer, dag_modifications.edge_reindexer);
+  inst_to_graft.UpdateEngineAfterGraftingDAG(graft_modifications.node_reindexer, graft_modifications.edge_reindexer);
+
 }
 
 // Build SubsplitDAG instance and procedurally add random NNIs.

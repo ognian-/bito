@@ -644,7 +644,11 @@ static SizeVector Argsort(const std::vector<T> &data_vector,
 }
 
 // TODO:
-void SubsplitDAG::SortNodes() {
+SizeVector SubsplitDAG::SortNodes(std::optional<SizeVector> node_reindexer) {
+  // initialize node_reindexer
+  if (node_reindexer == std::nullopt) {
+    std::iota(node_reindexer->begin(), node_reindexer->end(), 0);
+  }
   // Create argsorted vector by node's subsplits.
   // This creates a map from (index:old_id -> value:new_id).
   auto compare_dag_nodes = [](const std::unique_ptr<SubsplitDAGNode> &node_a,
@@ -842,7 +846,16 @@ void SubsplitDAG::ReversePostorderIndexTraversal(
 }
 
 // TODO:
-// ** Clade methods:
+// ** Clades
+
+void SubsplitDAG::InitClades() {
+  clade_to_ids_.clear();
+  for (const auto &subsplit_id_pair : subsplit_to_id_) {
+    size_t node_id = subsplit_id_pair.second;
+    Bitset node_subsplit = subsplit_id_pair.first;
+    AddNodeToClades(node_id, node_subsplit);
+  }
+}
 
 void SubsplitDAG::AddNodeToClades(const size_t node_id, const Bitset &node_subsplit) {
   // Add leftside and rightside clade of node.
@@ -865,9 +878,10 @@ void SubsplitDAG::AddNodeToClades(const size_t node_id, const Bitset &node_subsp
 
 void SubsplitDAG::RemoveNodeFromClades(const size_t node_id,
                                        const Bitset &node_subsplit) {
-  // Remove leftside and rightside clade of node.
-  for (const auto which_clade : {0, 1}) {
-    Bitset clade = node_subsplit.SubsplitGetClade(1);
+  // Add leftside and rightside clade of node.
+  Bitset left_clade = node_subsplit.SubsplitGetClade(0);
+  Bitset right_clade = node_subsplit.SubsplitGetClade(1);
+  for (const auto clade : {left_clade, right_clade}) {
     auto &ids = clade_to_ids_.find(clade)->second;
     for (size_t i = 0; i < ids.size(); i++) {
       if (ids[i] == node_id) {
@@ -964,8 +978,6 @@ bool SubsplitDAG::ContainsNode(const size_t node_id) const {
 }
 
 bool SubsplitDAG::ContainsEdge(const size_t parent_id, const size_t child_id) const {
-  if (parent_id > child_id) {
-  }
   return dag_edges_.find({parent_id, child_id}) != dag_edges_.end();
 }
 

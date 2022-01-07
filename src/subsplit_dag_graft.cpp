@@ -266,19 +266,69 @@ void SubsplitDAGGraft::ConnectNodeToAdjacentHostNodes(
   }
 }
 
-// ** Clades
+
+// TODO:
+// ** Clades 
+
+void SubsplitDAGGraft::InitClades() {
+  clade_to_ids_.clear();
+  // Add host clades.
+  for (const auto &subsplit_id_pair : host_dag_->GetSubsplitToIdMap()) {
+    size_t node_id = subsplit_id_pair.second;
+    Bitset node_subsplit = subsplit_id_pair.first;
+    AddNodeToClades(node_id, node_subsplit);
+  }
+  // Add graft clades.
+  for (const auto &subsplit_id_pair : subsplit_to_id_) {
+    size_t node_id = subsplit_id_pair.second;
+    Bitset node_subsplit = subsplit_id_pair.first;
+    AddNodeToClades(node_id, node_subsplit);
+  }
+}
 
 void SubsplitDAGGraft::AddNodeToClades(const size_t node_id,
-                                       const Bitset &node_subsplit) {}
+                                       const Bitset &node_subsplit,
+                                       const bool sort_ids) {
+  // Add leftside and rightside clade of node.
+  Bitset left_clade = node_subsplit.SubsplitGetClade(0);
+  Bitset right_clade = node_subsplit.SubsplitGetClade(1);
+  for (const auto clade : {left_clade, right_clade}) {
+    // If this is the first occurance, add clade and id to map.
+    if (clade_to_ids_.find(clade) == clade_to_ids_.end()) {
+      SizeVector ids = {node_id};
+      clade_to_ids_.insert(std::make_pair(clade, ids));
+    }
+    // If clade is already in map, add id to list.
+    else {
+      auto &ids = clade_to_ids_.find(clade)->second;
+      ids.push_back(node_id);
+      std::sort(ids.begin(), ids.end());
+    }
+  }
+}
 
 void SubsplitDAGGraft::RemoveNodeFromClades(const size_t node_id,
-                                            const Bitset &node_subsplit) {}
+                                            const Bitset &node_subsplit,
+                                            const bool sort_ids) {
+  // Add leftside and rightside clade of node.
+  Bitset left_clade = node_subsplit.SubsplitGetClade(0);
+  Bitset right_clade = node_subsplit.SubsplitGetClade(1);
+  for (const auto clade : {left_clade, right_clade}) {
+    auto &ids = clade_to_ids_.find(clade)->second;
+    for (size_t i = 0; i < ids.size(); i++) {
+      if (ids[i] == node_id) {
+        ids.erase(ids.begin() + i);
+      }
+    }
+  }
+}
 
 SizeVector SubsplitDAGGraft::GetAllChildrenOfNode(const Bitset &node_subsplit,
                                                   const bool which_child) const {}
 
 SizeVector SubsplitDAGGraft::GetAllParentsOfNode(const Bitset &node_subsplit,
                                                  const bool which_child) const {}
+
 
 // ** Getters
 
@@ -300,10 +350,28 @@ size_t SubsplitDAGGraft::GetNodeId(const Bitset &node_subsplit) const {
     return host_dag_->GetNodeId(node_subsplit);
   }
   // Check if subsplit is in the graft.
+  Assert(subsplit_to_id_.find(node_subsplit) != subsplit_to_id_.end(), 
+      "GetNodeId(): Subsplit does not correspond to a node in GraftDAG.");
   return subsplit_to_id_.at(node_subsplit);
 }
 
 size_t SubsplitDAGGraft::GetRootNodeId() const { return host_dag_->GetRootNodeId(); }
+
+size_t SubsplitDAGGraft::GetEdgeIdx(const Bitset &parent_subsplit, const Bitset &child_subsplit) const {
+  size_t parent_id = GetNodeId(parent_subsplit);
+  size_t child_id = GetNodeId(child_subsplit);
+}
+
+size_t SubsplitDAGGraft::GetEdgeIdx(const size_t parent_id, const size_t child_id) const {
+  // Check for edge in graft.
+  if (graft_edges_.find(std::make_pair(parent_id, child_id)) != graft_edges_.end()) {
+    return graft_edges_.at(std::make_pair(parent_id, child_id));
+  }
+  // Check for edge in host.
+  Assert(host_dag_->ContainsEdge(parent_id, child_id), 
+      "GetEdgeIdx: There is no edge corresponding to given parent/child pair in GraftDAG.");
+  return host_dag_->GetEdgeIdx(parent_id, child_id);
+}
 
 BitsetVector SubsplitDAGGraft::GetSortedVectorOfNodeBitsets(bool include_host) {
   std::vector<Bitset> nodes;

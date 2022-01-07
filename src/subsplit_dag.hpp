@@ -107,7 +107,7 @@ class SubsplitDAG {
   // Output DOT format graph of DAG to a string.
   std::string ToDot(bool show_index_labels = true) const;
 
-  // ** Build Output Indexers/Vectors
+  // ** Build Indexers/Vectors
 
   // Create a EdgeIndexer representing the DAG.
   // The EdgeIndexer is a map (edge/PCSP bitset -> edge/PCSP index).
@@ -463,8 +463,10 @@ class SubsplitDAG {
   // Delete Edge from the DAG.
   void DeleteEdge(const size_t parent_id, const size_t child_id, bool rotated);
 
-  // Reorder nodes so that DAG nodes sorted in a topological ordering.
-  void SortNodes();
+  // Reorder nodes so that DAG nodes sorted in a topological ordering. 
+  // Returns a node reindexer. If optional node_reindexer is passed, then 
+  // that is used for the initial base reindexer, otherwise uses identity.
+  SizeVector SortNodes(std::optional<SizeVector> node_reindexer = std::nullopt);
 
   // Add edge relationship to each node's respective SubsplitDAGNode.
   void ConnectGivenNodes(const size_t parent_id, const size_t child_id, bool rotated);
@@ -520,6 +522,8 @@ class SubsplitDAG {
 
   // ** Clades
 
+  // Initialize clades
+  void InitClades();
   // Add both of node's clades to the clade map.
   void AddNodeToClades(const size_t node_id, const Bitset &node_subsplit);
   // Remove both of node's clades from the clade map.

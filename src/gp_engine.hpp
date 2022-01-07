@@ -21,7 +21,6 @@
 
 class GPEngine {
  public:
-  //
   GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
            const std::string& mmap_file_path, double rescaling_threshold,
            EigenVectorXd sbn_prior, EigenVectorXd unconditional_node_probabilities,
@@ -39,7 +38,7 @@ class GPEngine {
   void operator()(const GPOperations::UpdateSBNProbabilities& op);
   void operator()(const GPOperations::PrepForMarginalization& op);
 
-  // Update stats and data to reflect current SubsplitDAG after modification.
+  // Update stats and data to reflect current DAG state.
   void Initialize(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
                   const std::string& mmap_file_path, double rescaling_threshold,
                   EigenVectorXd sbn_prior,
@@ -200,15 +199,17 @@ class GPEngine {
   EigenVectorXd hybrid_marginal_log_likelihoods_;
   // Descriptor containing all taxons and sequence alignments.
   SitePattern site_pattern_;
-  // Total number of PLV across entire DAG: plv_per_node * node_count
-  size_t plv_count_;
-  //
+  // Rescaling threshold factor to prevent under/overflow errors.
   const double rescaling_threshold_;
   // Rescaling threshold in log space.
   const double log_rescaling_threshold_;
-  //
+
+  // Total number of PLV across entire DAG: plv_per_node * node_count_without_root
+  size_t plv_count_;
+  // Master PLV: Large data block of virtual memory for Partial Likelihood Vectors.
+  // Subdivided into sections for plvs_.
   MmappedNucleotidePLV mmapped_master_plv_;
-  // Partial Likelihood Vectors
+  // Partial Likelihood Vectors.
   // plvs_ store the following (see GPDAG::GetPLVIndexStatic):
   // [0, num_nodes): p(s).
   // [num_nodes, 2*num_nodes): phat(s).
@@ -219,14 +220,19 @@ class GPEngine {
   NucleotidePLVRefVector plvs_;
   //
   EigenVectorXi rescaling_counts_;
+
+  // ** SBN Parameters
   // branch_lengths_, q_, etc. are indexed in the same way as sbn_parameters_ in
   // gp_instance.
   EigenVectorXd branch_lengths_;
-  //
+  // TODO: Add data array to store the sbn_prior (in linear space?)
+  // During initialization, stores the SBN prior.
+  // After UpdateSBNProbabilities(), stores the SBN probabilities.
+  // Stored in log space.
   EigenVectorXd q_;
-  //
+  // 
   EigenVectorXd unconditional_node_probabilities_;
-  //
+  //  
   EigenVectorXd inverted_sbn_prior_;
 
   // The number of rows is equal to the number of GPCSPs.

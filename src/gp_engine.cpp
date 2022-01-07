@@ -24,7 +24,6 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
   Assert(plvs_.back().rows() == MmappedNucleotidePLV::base_count_ &&
              plvs_.back().cols() == site_pattern_.PatternCount(),
          "Didn't get the right shape of PLVs out of Subdivide.");
-  //
   rescaling_counts_.resize(plv_count_);
   rescaling_counts_.setZero();
   branch_lengths_.resize(gpcsp_count);
@@ -32,10 +31,10 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
   log_marginal_likelihood_.resize(site_pattern_.PatternCount());
   log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
   log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
-  //
+
   auto weights = site_pattern_.GetWeights();
   site_pattern_weights_ = EigenVectorXdOfStdVectorDouble(weights);
-  //
+  
   quartet_root_plv_ = plvs_.at(0);
   quartet_root_plv_.setZero();
   quartet_r_s_plv_ = quartet_root_plv_;
@@ -43,7 +42,7 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
   quartet_r_sorted_plv_ = quartet_root_plv_;
   hybrid_marginal_log_likelihoods_.resize(gpcsp_count);
   hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
-  //
+  
   InitializePLVsWithSitePatterns();
 }
 
@@ -61,6 +60,7 @@ void GPEngine::UpdateAfterModifyingDAG(SitePattern site_pattern, const size_t ol
                                const SizeVector& node_reindexer,
                                const SizeVector& edge_reindexer) {
   size_t old_size, new_size;
+  EigenVectorXd old_data_vector;
 
   // (1) Resize and Remap mmapped data.
   // Update mmapping size so it can store new nodes.
@@ -76,32 +76,56 @@ void GPEngine::UpdateAfterModifyingDAG(SitePattern site_pattern, const size_t ol
   //   size_t new_index = node_reindexer[i];
   //   *new_plvs.at(new_index) = *old_plvs.at(old_index);
   // }
+
+  auto ResizeAndRemap1D = [](EigenVectorXd &data_vector, const SizeVector &reindexer) {
+    size_t old_size = data_vector.size();
+    size_t new_size = reindexer.size();
+    EigenVectorXd old_data_vector = EigenVectorXd(data_vector);
+    // Resize data.
+    data_vector.resize(new_size);
+    data_vector.setConstant(DOUBLE_NEG_INF);
+    // Remap data.
+    for (size_t i = 0; i < old_size; i++) {
+      size_t old_idx = i;
+      size_t new_idx = reindexer[i];
+      data_vector[new_idx] = old_data_vector[old_idx];
+    }
+  };
   
   // (2) Resize and Remap data for branch lengths.
   // Update data vector sizes for new nodes in DAG.
-  old_size = branch_lengths_.size();
-  EigenVectorXd old_data_vector(branch_lengths_);
-  branch_lengths_.resize(new_gpcsp_count);
-  branch_lengths_.setConstant(DOUBLE_NEG_INF);
-  new_size = branch_lengths_.size();
-  // Remap data according to new indexing of edges.
-  for (size_t i = 0; i < old_size; i++) {
-    size_t old_index = i;
-    size_t new_index = edge_reindexer[i];
-    branch_lengths_[new_index] = old_data_vector[old_index];
-  }
+  ResizeAndRemap1D(branch_lengths_, edge_reindexer);
+
+  auto ResizeAndRemap2D = [](EigenVectorXd &data_vector, const SizeVector &reindexer, const size_t second_dim) {
+    size_t old_size = data_vector.size();
+    size_t new_size = reindexer.size();
+    EigenVectorXd old_data_vector = EigenVectorXd(data_vector);
+    // Resize data.
+    data_vector.resize(new_size, second_dim);
+    data_vector.setConstant(DOUBLE_NEG_INF);
+    // Remap data.
+    for (size_t i = 0; i < old_size; i++) {
+      size_t old_idx = i;
+      size_t new_idx = reindexer[i];
+      for (size_t j = 0; j < second_dim; j++)
+      data_vector[j, new_idx] = old_data_vector[j, old_idx];
+    }
+  };
 
   // (3) Resize and Remap data for log likelihoods.
-  log_likelihoods_.resize(new_gpcsp_count, site_pattern_.PatternCount());
+  // ResizeAndRemap2D(log_likelihoods_, edge_reindexer, site_pattern_.PatternCount());
+
   // (4) Resize and Remap data for branch lengths.
-  hybrid_marginal_log_likelihoods_.resize(new_gpcsp_count);
+  hybrid_marginal_log_likelihoods_.resize(site_pattern_.PatternCount());
 }
 
 void UpdateAfterGraftingDAG(SitePattern site_pattern, size_t plv_count,
                             size_t gpcsp_count, const std::string& mmap_file_path,
                             const std::string& graft_mmap_file_path) {}
 
-void ComputePerNNIPerPCSPLikelihood(const size_t parent_node_id, const size_t child_node_id) {}
+void ComputePerNNIPerPCSPLikelihood(const size_t parent_node_id, const size_t child_node_id, 
+                                    SizeVector &parents_of_parent_nodes, SizeVector &children_of_parent_nodes,
+                                    SizeVector &parents_of_child_nodes, SizeVector &children_of_child_nodes) {}
 
 void GPEngine::operator()(const GPOperations::ZeroPLV& op) {
   plvs_.at(op.dest_).setZero();

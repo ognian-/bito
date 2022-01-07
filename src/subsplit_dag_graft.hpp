@@ -15,21 +15,6 @@
 class GPDAG;
 
 class SubsplitDAGGraft {
- protected:
-  // DAG that the graft is proposed to be connected to.
-  SubsplitDAG *host_dag_;
-  // Nodes in the graft.
-  std::vector<std::unique_ptr<SubsplitDAGNode>> graft_nodes_;
-  // Edges in the graft.
-  std::map<SizePair, size_t> graft_edges_;
-  // Ids of nodes that are adjacent to a graft node (connect by edge).
-  std::map<size_t, std::unique_ptr<SubsplitDAGNode>> bridge_nodes_;
-  // - Map of all DAG Nodes:
-  //    - [ Node Subsplit (Bitset) => Node Id ]
-  BitsetSizeMap subsplit_to_id_;
-  // A map from a clade to the vector of node ids containing that clade.
-  std::map<Bitset, SizeVector> clade_to_ids_;
-
  public:
   // ** Constructors:
 
@@ -68,18 +53,28 @@ class SubsplitDAGGraft {
   // Create sorted list of all node in graft. Returns node reindexer.
   SizeVector SortGraftNodes();
 
-  // ** Clades
+  // TODO: 
+  // ** Clades 
 
+  // 
+  void InitClades();
   // Add both of node's clades to the clade map.
-  void AddNodeToClades(const size_t node_id, const Bitset &node_subsplit);
+  void AddNodeToClades(const size_t node_id, const Bitset &node_subsplit, const bool sort_ids = true);
   // Remove both of node's clades from the clade map.
-  void RemoveNodeFromClades(const size_t node_id, const Bitset &node_subsplit);
+  void RemoveNodeFromClades(const size_t node_id, const Bitset &node_subsplit, const bool sort_ids = true);
   // Get all the child nodes of given subsplit (specify left or right child).
   SizeVector GetAllChildrenOfNode(const Bitset &node_subsplit,
                                   const bool which_child) const;
   // Get all parent nodes of a given subsplit (specify left or right child).
   SizeVector GetAllParentsOfNode(const Bitset &node_subsplit,
                                  const bool which_child) const;
+
+  // ** Build Indexers/Vectors
+
+  // Get the rotated and sorted parents of the node with the given subsplit.
+  std::pair<SizeVector, SizeVector> BuildParentIdVector(const Bitset &subsplit) const;
+  // Get the rotated and sorted children of the node with the given subsplit.
+  std::pair<SizeVector, SizeVector> BuildChildIdVector(const Bitset &subsplit) const;
 
   // ** Getters
 
@@ -95,11 +90,12 @@ class SubsplitDAGGraft {
   SubsplitDAGNode *GetNode(const size_t node_id) const;
   // Return the node ids corresponding to the rootsplits.
   const SizeVector &GetRootsplitIds() const;
-  // Get the GPCSP/edge index by its parent-child pair subsplits from the DAG nodes.
-  size_t GetGPCSPEdgeIdx(const Bitset &parent_subsplit,
-                         const Bitset &child_subsplit) const;
-  // Get the GPCSP edge index by its parent-child pair id from the DAG nodes.
-  size_t GetGPCSPEdgeIdx(const size_t parent_id, const size_t child_id) const;
+  // Get the GPCSP/edge index by its parent/child pair.
+  size_t GetEdgeIdx(const Bitset &parent_subsplit,
+                    const Bitset &child_subsplit) const;
+  size_t GetEdgeIdx(const size_t parent_id, const size_t child_id) const;
+  //
+  SizeVector GetAdjacentEdges(const size_t node_id, const bool is_leafward, const bool is_leftward) const;
   // Get a sorted vector of all node subsplit's bitset representation. Optionally only
   // graft nodes, or graft and host nodes.
   BitsetVector GetSortedVectorOfNodeBitsets(bool include_host = true);
@@ -160,7 +156,7 @@ class SubsplitDAGGraft {
   bool IsValidRemoveNodePair(const Bitset parent_subsplit,
                              const Bitset child_subsplit) const;
 
- private:
+ protected:
   // ** Modify DAG
   // These modification do not ensure a valid, consistent state for DAG.
 
@@ -184,6 +180,21 @@ class SubsplitDAGGraft {
       const size_t main_node_id, const SizeVector adjacent_node_ids,
       const bool is_main_node_parent, const bool is_left_child,
       std::optional<size_t> ignored_node_id_opt = std::nullopt);
+
+ protected:
+  // DAG that the graft is proposed to be connected to.
+  SubsplitDAG *host_dag_;
+  // Nodes in the graft.
+  std::vector<std::unique_ptr<SubsplitDAGNode>> graft_nodes_;
+  // Edges in the graft.
+  std::map<SizePair, size_t> graft_edges_;
+  // Ids of nodes that are adjacent to a graft node (connect by edge).
+  std::map<size_t, std::unique_ptr<SubsplitDAGNode>> bridge_nodes_;
+  // Map of all DAG Nodes:
+  //   - [ Node Subsplit (Bitset) => Node Id ]
+  BitsetSizeMap subsplit_to_id_;
+  // A map from a clade to the vector of node ids containing that clade.
+  std::map<Bitset, SizeVector> clade_to_ids_;
 };
 
 #endif  // SRC_SUBSPLIT_DAG_GRAFT_HPP

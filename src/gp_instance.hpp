@@ -98,7 +98,7 @@ class GPInstance {
   // Export the subsplit DAG as a DOT file.
   void SubsplitDAGToDot(const std::string &out_path, bool show_index_labels = true);
 
-  // TODO:
+  // TODO: Work in Progress
   // ** NNI Evaluation Engine
 
   // Initialize NNI Evaluation Engine.

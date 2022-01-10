@@ -1163,8 +1163,8 @@ TEST_CASE("SubsplitDAGGraft: AddNodePair Equivalence Test") {
     SubsplitDAGGraft graft_dag = SubsplitDAGGraft(dag_to_graft);
 
     auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(i);
-    std::cout << "NNI_TO_ADD [" << i << "]: " << nni_to_add.parent_.SubsplitToString() << "," << nni_to_add.child_.SubsplitToString()
-              << std::endl;
+    std::cout << "NNI_TO_ADD [" << i << "]: " << nni_to_add.parent_.SubsplitToString()
+              << "," << nni_to_add.child_.SubsplitToString() << std::endl;
     dag.AddNodePair(nni_to_add.parent_, nni_to_add.child_);
     graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
     CHECK_MESSAGE(SubsplitDAGGraft::CompareToDAG(graft_dag, dag) == 0,
@@ -1213,18 +1213,18 @@ TEST_CASE("SubsplitDAGGraft: PerPCSP Likelihood Test.") {
   inst_to_graft.ComputeLikelihoods();
   EigenVectorXd grafted_realized_log_likelihoods =
       inst_to_graft.GetEngine()->GetPerGPCSPLogLikelihoods();
-  
+
   // Add an NNI.
   auto nni_to_add = nni_engine.GetNNIFromAdjacentNNIs(0);
   auto dag_modifications = dag.AddNodePair(nni_to_add.parent_, nni_to_add.child_);
-  auto graft_modifications = graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
+  auto graft_modifications =
+      graft_dag.AddGraftNodePair(nni_to_add.parent_, nni_to_add.child_);
   // Update Engine with added NNI.
-  inst.UpdateEngineAfterModifyingDAG(dag_modifications.node_reindexer, dag_modifications.edge_reindexer);
-  inst_to_graft.UpdateEngineAfterGraftingDAG(graft_modifications.node_reindexer, graft_modifications.edge_reindexer);
-
+  inst.UpdateEngineAfterModifyingDAG(dag_modifications.node_reindexer,
+                                     dag_modifications.edge_reindexer);
+  inst_to_graft.UpdateEngineAfterGraftingDAG(graft_modifications.node_reindexer,
+                                             graft_modifications.edge_reindexer);
 }
 
 // Build SubsplitDAG instance and procedurally add random NNIs.
-TEST_CASE("SubsplitDAG NNI Speed Test") {
-
-}
+TEST_CASE("SubsplitDAG NNI Speed Test") {}

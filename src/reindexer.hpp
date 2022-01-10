@@ -18,9 +18,9 @@
 
 #include <numeric>
 
+#include "bitset.hpp"
 #include "eigen_sugar.hpp"
 #include "sugar.hpp"
-#include "bitset.hpp"
 
 using ReindexVector = SizeVector;
 
@@ -80,9 +80,11 @@ inline VectorType Reindex(VectorType &old_vector, const SizeVector &reindexer,
 }
 
 // TODO: Work in Progress
-// Reindexes the given vector of given datatype according to the reindexer, done in place with bool checking.
+// Reindexes the given vector of given datatype according to the reindexer, done in
+// place with bool checking.
 template <typename VectorType, typename DataType>
-inline void ReindexInPlace(VectorType &data_vector, const SizeVector &reindexer, std::optional<DataType> fill_value = std::nullopt) {
+inline void ReindexInPlace(VectorType &data_vector, const SizeVector &reindexer,
+                           std::optional<DataType> fill_value = std::nullopt) {
   size_t old_size = data_vector.size();
   size_t new_size = reindexer.size();
   Bitset is_reindexed(new_size);
@@ -105,7 +107,7 @@ inline void ReindexInPlace(VectorType &data_vector, const SizeVector &reindexer,
       data_vector[new_index] = old_swap_value;
       old_swap_value = new_swap_value;
       is_reindexed[old_index] = true;
-    } 
+    }
   }
 }
 

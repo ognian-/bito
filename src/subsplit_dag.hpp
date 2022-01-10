@@ -463,8 +463,8 @@ class SubsplitDAG {
   // Delete Edge from the DAG.
   void DeleteEdge(const size_t parent_id, const size_t child_id, bool rotated);
 
-  // Reorder nodes so that DAG nodes sorted in a topological ordering. 
-  // Returns a node reindexer. If optional node_reindexer is passed, then 
+  // Reorder nodes so that DAG nodes sorted in a topological ordering.
+  // Returns a node reindexer. If optional node_reindexer is passed, then
   // that is used for the initial base reindexer, otherwise uses identity.
   SizeVector SortNodes(std::optional<SizeVector> node_reindexer = std::nullopt);
 

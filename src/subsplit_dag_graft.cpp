@@ -4,8 +4,8 @@
 #include "subsplit_dag_graft.hpp"
 
 #include "gp_dag.hpp"
-#include "subsplit_dag.hpp"
 #include "reindexer.hpp"
+#include "subsplit_dag.hpp"
 
 // ** Constructors
 
@@ -158,8 +158,8 @@ void SubsplitDAGGraft::DestroyGraftEdge(const Bitset &parent_subsplit,
   // Remove edge from edge list.
 }
 
-SubsplitDAG::ModificationResult SubsplitDAGGraft::AddGraftNodePair(const Bitset &parent_subsplit,
-                                        const Bitset &child_subsplit) {
+SubsplitDAG::ModificationResult SubsplitDAGGraft::AddGraftNodePair(
+    const Bitset &parent_subsplit, const Bitset &child_subsplit) {
   std::cout << "Begin AddGraft" << std::endl;
   // Initialize results.
   SubsplitDAG::ModificationResult results;
@@ -192,29 +192,29 @@ SubsplitDAG::ModificationResult SubsplitDAGGraft::AddGraftNodePair(const Bitset 
     const auto [left_parents_of_parent, right_parents_of_parent] =
         host_dag_->BuildParentIdVector(parent_subsplit);
     ConnectNodeToAdjacentHostNodes(parent_id, left_parents_of_parent, false, true,
-                                  child_id);
+                                   child_id);
     ConnectNodeToAdjacentHostNodes(parent_id, right_parents_of_parent, false, false,
-                                  child_id);
+                                   child_id);
     const auto [left_children_of_parent, right_children_of_parent] =
         host_dag_->BuildChildIdVector(parent_subsplit);
     ConnectNodeToAdjacentHostNodes(parent_id, left_children_of_parent, true, true,
-                                  child_id);
+                                   child_id);
     ConnectNodeToAdjacentHostNodes(parent_id, right_children_of_parent, true, false,
-                                  child_id);
+                                   child_id);
   }
   if (child_is_new) {
     const auto [left_parents_of_child, right_parents_of_child] =
         host_dag_->BuildParentIdVector(child_subsplit);
     ConnectNodeToAdjacentHostNodes(child_id, left_parents_of_child, false, true,
-                                  parent_id);
+                                   parent_id);
     ConnectNodeToAdjacentHostNodes(child_id, right_parents_of_child, false, false,
-                                  parent_id);
+                                   parent_id);
     const auto [left_children_of_child, right_children_of_child] =
         host_dag_->BuildChildIdVector(child_subsplit);
     ConnectNodeToAdjacentHostNodes(child_id, left_children_of_child, true, true,
-                                  parent_id);
+                                   parent_id);
     ConnectNodeToAdjacentHostNodes(child_id, right_children_of_child, true, false,
-                                  parent_id);
+                                   parent_id);
   }
   // Connect parent to child.
   CreateGraftEdge(parent_id, child_id);
@@ -225,8 +225,8 @@ SubsplitDAG::ModificationResult SubsplitDAGGraft::AddGraftNodePair(const Bitset 
 }
 
 // TODO:
-SubsplitDAG::ModificationResult SubsplitDAGGraft::RemoveGraftNodePair(const Bitset &parent_subsplit,
-                                           const Bitset &child_subsplit) {
+SubsplitDAG::ModificationResult SubsplitDAGGraft::RemoveGraftNodePair(
+    const Bitset &parent_subsplit, const Bitset &child_subsplit) {
   // Initialize results.
   SubsplitDAG::ModificationResult results;
 
@@ -238,7 +238,6 @@ SubsplitDAG::ModificationResult SubsplitDAGGraft::RemoveGraftNodePair(const Bits
 
 void SubsplitDAGGraft::RemoveAllGrafts() {
   graft_nodes_.clear();
-  bridge_nodes_.clear();
   graft_edges_.clear();
   subsplit_to_id_.clear();
   clade_to_ids_.clear();
@@ -266,9 +265,8 @@ void SubsplitDAGGraft::ConnectNodeToAdjacentHostNodes(
   }
 }
 
-
 // TODO:
-// ** Clades 
+// ** Clades
 
 void SubsplitDAGGraft::InitClades() {
   clade_to_ids_.clear();
@@ -329,7 +327,6 @@ SizeVector SubsplitDAGGraft::GetAllChildrenOfNode(const Bitset &node_subsplit,
 SizeVector SubsplitDAGGraft::GetAllParentsOfNode(const Bitset &node_subsplit,
                                                  const bool which_child) const {}
 
-
 // ** Getters
 
 SubsplitDAG *SubsplitDAGGraft::GetHostDAG() { return host_dag_; }
@@ -350,26 +347,29 @@ size_t SubsplitDAGGraft::GetNodeId(const Bitset &node_subsplit) const {
     return host_dag_->GetNodeId(node_subsplit);
   }
   // Check if subsplit is in the graft.
-  Assert(subsplit_to_id_.find(node_subsplit) != subsplit_to_id_.end(), 
-      "GetNodeId(): Subsplit does not correspond to a node in GraftDAG.");
+  Assert(subsplit_to_id_.find(node_subsplit) != subsplit_to_id_.end(),
+         "GetNodeId(): Subsplit does not correspond to a node in GraftDAG.");
   return subsplit_to_id_.at(node_subsplit);
 }
 
 size_t SubsplitDAGGraft::GetRootNodeId() const { return host_dag_->GetRootNodeId(); }
 
-size_t SubsplitDAGGraft::GetEdgeIdx(const Bitset &parent_subsplit, const Bitset &child_subsplit) const {
+size_t SubsplitDAGGraft::GetEdgeIdx(const Bitset &parent_subsplit,
+                                    const Bitset &child_subsplit) const {
   size_t parent_id = GetNodeId(parent_subsplit);
   size_t child_id = GetNodeId(child_subsplit);
 }
 
-size_t SubsplitDAGGraft::GetEdgeIdx(const size_t parent_id, const size_t child_id) const {
+size_t SubsplitDAGGraft::GetEdgeIdx(const size_t parent_id,
+                                    const size_t child_id) const {
   // Check for edge in graft.
   if (graft_edges_.find(std::make_pair(parent_id, child_id)) != graft_edges_.end()) {
     return graft_edges_.at(std::make_pair(parent_id, child_id));
   }
   // Check for edge in host.
-  Assert(host_dag_->ContainsEdge(parent_id, child_id), 
-      "GetEdgeIdx: There is no edge corresponding to given parent/child pair in GraftDAG.");
+  Assert(host_dag_->ContainsEdge(parent_id, child_id),
+         "GetEdgeIdx: There is no edge corresponding to given parent/child pair in "
+         "GraftDAG.");
   return host_dag_->GetEdgeIdx(parent_id, child_id);
 }
 
@@ -431,7 +431,12 @@ size_t SubsplitDAGGraft::HostEdgeCount() const {
   return host_dag_->EdgeCountWithLeafSubsplits();
 }
 
-// ** Contains
+
+//    These two data structures maintain sorted vectors. There one difference is that
+//    SortedVector allows for duplicate data, SortedUniqueVector does not. SortedVectors
+//    are an alternative to std::set. std::set is useful when you have a large dataset
+//    that you are frequently inserting into.  But vectors have superior cache
+//    performance during access than the Red/Black Trees of std::set.// ** Contains
 
 bool SubsplitDAGGraft::ContainsGraftNode(const Bitset node_subsplit) const {
   return subsplit_to_id_.find(node_subsplit) != subsplit_to_id_.end();

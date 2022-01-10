@@ -109,16 +109,20 @@ class GPInstance {
   size_t GetNNICount();
 
   // Add NNI pair.
-  SubsplitDAG::ModificationResult AddNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
-  SubsplitDAG::ModificationResult AddGraftNodePair(const Bitset &parent_bitset, const Bitset &child_bitset);
+  SubsplitDAG::ModificationResult AddNodePair(const Bitset &parent_bitset,
+                                              const Bitset &child_bitset);
+  SubsplitDAG::ModificationResult AddGraftNodePair(const Bitset &parent_bitset,
+                                                   const Bitset &child_bitset);
   // Update engine.
   void UpdateEngineAfterModifyingDAG(const SizeVector &node_reindexer,
                                      const SizeVector &edge_reindexer);
   void UpdateEngineAfterGraftingDAG(const SizeVector &node_reindexer,
                                     const SizeVector &edge_reindexer);
   // Compute Marginal Likelihood for NNI.
-  void ComputePerNNIPerPCSPLikelihood(const Bitset &parent_bitset, const Bitset &child_bitset);
-  void ComputePerNNIPerPCSPLikelihood(const SubsplitDAGNode &parent_node, const SubsplitDAGNode &child_node);
+  void ComputePerNNIPerPCSPLikelihood(const Bitset &parent_bitset,
+                                      const Bitset &child_bitset);
+  void ComputePerNNIPerPCSPLikelihood(const SubsplitDAGNode &parent_node,
+                                      const SubsplitDAGNode &child_node);
 
   // Initialize graft dag.
   void MakeGraftDAG();

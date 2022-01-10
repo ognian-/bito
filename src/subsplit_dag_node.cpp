@@ -31,8 +31,9 @@ bool SubsplitDAGNode::IsNodeConnected(const size_t node_id) const {
   return false;
 };
 
-bool SubsplitDAGNode::IsNodeConnected(const size_t node_id, const bool is_leafward, const bool is_leftside) const {
-  for (const auto& adj_node_id : GetEdge(is_leafward, is_leftside)) {
+bool SubsplitDAGNode::IsNodeConnected(const size_t node_id, const bool is_leafward,
+                                      const bool is_leftside) const {
+  for (const auto &adj_node_id : GetEdge(is_leafward, is_leftside)) {
     if (adj_node_id == node_id) {
       return true;
     }

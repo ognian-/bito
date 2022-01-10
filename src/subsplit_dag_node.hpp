@@ -79,13 +79,11 @@ class SubsplitDAGNode {
     is_leftside ? RemoveRootwardLeftside(adjacent_node_id)
                 : RemoveRootwardRightside(adjacent_node_id);
   }
-  void RemoveLeafwardLeftside(size_t node_id) { 
-    leafward_leftside_.push_back(node_id); }
+  void RemoveLeafwardLeftside(size_t node_id) { leafward_leftside_.push_back(node_id); }
   void RemoveLeafwardRightside(size_t node_id) {
     leafward_rightside_.push_back(node_id);
   }
-  void RemoveRootwardLeftside(size_t node_id) { 
-    rootward_leftside_.push_back(node_id); }
+  void RemoveRootwardLeftside(size_t node_id) { rootward_leftside_.push_back(node_id); }
   void RemoveRootwardRightside(size_t node_id) {
     rootward_rightside_.push_back(node_id);
   }
@@ -123,8 +121,9 @@ class SubsplitDAGNode {
   // TODO:
   // Check if given DAGNode is connected to this DAGNode (in any direction).
   bool IsNodeConnected(const size_t node_id) const;
-  // Check if node is connected, with relation specified. 
-  bool IsNodeConnected(const size_t node_id, const bool is_leafward, const bool is_leftside) const;
+  // Check if node is connected, with relation specified.
+  bool IsNodeConnected(const size_t node_id, const bool is_leafward,
+                       const bool is_leftside) const;
 
   // Check if node is in a valid state for the SubsplitDAG.
   // To be valid, a node must have at least one parent, one left child, and one right

@@ -96,8 +96,10 @@ class GPEngine {
 
   // TODO: Update after modify/grafting DAG.
   // Resize data members to store SubsplitDAG after modification.
-  void UpdateAfterModifyingDAG(SitePattern site_pattern, const size_t old_plv_count, const size_t new_plv_count,
-                               const size_t old_gpcsp_count, const size_t new_gpcsp_count, const std::string& mmap_file_path,
+  void UpdateAfterModifyingDAG(SitePattern site_pattern, const size_t old_plv_count,
+                               const size_t new_plv_count, const size_t old_gpcsp_count,
+                               const size_t new_gpcsp_count,
+                               const std::string& mmap_file_path,
                                const SizeVector& node_reindexer,
                                const SizeVector& edge_reindexer);
   // Append new data members to store SubsplitDAG growth after modification.
@@ -105,7 +107,8 @@ class GPEngine {
                               size_t gpcsp_count, const std::string& mmap_file_path,
                               const std::string& graft_mmap_file_path);
   // 
-  void ComputePerNNIPerPCSPLikelihood(const size_t parent_node_id, const size_t child_node_id);
+  void ComputePerNNIPerPCSPLikelihood(const size_t parent_node_id,
+                                      const size_t child_node_id);
 
   // Calculate a vector of likelihoods, one for each summand of the hybrid marginal.
   EigenVectorXd CalculateQuartetHybridLikelihoodsWithGraft(
@@ -230,9 +233,9 @@ class GPEngine {
   // After UpdateSBNProbabilities(), stores the SBN probabilities.
   // Stored in log space.
   EigenVectorXd q_;
-  // 
+  //
   EigenVectorXd unconditional_node_probabilities_;
-  //  
+  //
   EigenVectorXd inverted_sbn_prior_;
 
   // The number of rows is equal to the number of GPCSPs.
@@ -273,7 +276,8 @@ class GPEngine {
   EigenMatrixXd quartet_r_sorted_plv_;
 
   // Grafting data.
-  // std::optional<MmappedNucleotidePLV> mmapped_grafted_plv_ = std::nullopt;
+  std::optional<MmappedNucleotidePLV> grafted_mmapped_master_plv_ = std::nullopt;
+  std::optional<NucleotidePLVRefVector> grafted_plvs_ = std::nullopt;
 };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

@@ -82,18 +82,6 @@ double FatBeagle::UnrootedLogLikelihood(const RootedTree &tree,
   return LogLikelihoodInternals(tree.Topology(), tree.BranchLengths());
 }
 
-double FatBeagle::LogLikelihood(const RootedTree &tree) const {
-  std::vector<double> branch_lengths = tree.BranchLengths();
-  const std::vector<double> &rates = tree.GetRates();
-  for (size_t i = 0; i < tree.BranchLengths().size() - 1; i++) {
-    branch_lengths[i] *= rates[i];
-  }
-  double log_likelihood = LogLikelihoodInternals(tree.Topology(), branch_lengths);
-
-  return LogLikelihoodInternals(tree.Topology(), branch_lengths) +
-         ::LogDetJacobianHeightTransform(tree);
-}
-
 double FatBeagle::LogLikelihood(const RootedTree &tree,
                                 std::optional<PhyloFlags> flags) const {
   double log_likelihood = 0.0f;

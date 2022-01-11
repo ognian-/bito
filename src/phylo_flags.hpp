@@ -6,8 +6,7 @@
 // GradientMap returned by PhyloGradients.
 //
 
-#ifndef SRC_PHYLO_FLAGS_HPP_
-#define SRC_PHYLO_FLAGS_HPP_
+#pragma once
 
 #include "phylo_model.hpp"
 #include "substitution_model.hpp"
@@ -245,4 +244,3 @@ class PhyloFlags {
   bool is_run_defaults_;
 };
 
-#endif  // SRC_PHYLO_FLAGS_HPP_

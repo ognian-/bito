@@ -5,10 +5,10 @@
 // BisortVector This defines various specialized containers:
 // - SortedVector, SortedUniqueVector:
 //    These two data structures maintain sorted vectors. There one difference is that
-//    SortedVector allows for duplicate elements in vector, SortedUniqueVector does not. SortedVectors
-//    are an alternative to std::set. std::set is useful when you have a large dataset
-//    that you are frequently inserting into.  But vectors have superior cache
-//    performance during access than the Red/Black Trees of std::set.
+//    SortedVector allows for duplicate elements in vector, SortedUniqueVector does not.
+//    SortedVectors are an alternative to std::set. std::set is useful when you have a
+//    large dataset that you are frequently inserting into.  But vectors have superior
+//    cache performance during access than the Red/Black Trees of std::set.
 
 // TODO: Work in Progress.
 
@@ -34,7 +34,7 @@ class SortedVector {
   // ** Constructors:
 
   // Empty vector.
-  SortedVector() : is_sorted_(true), data_() {};
+  SortedVector() : is_sorted_(true), data_(){};
   // Build sorted vector from normal vector.
   SortedVector(const std::vector<T> &data, const bool is_vector_sorted = false)
       : is_sorted_(false), data_(data) {
@@ -59,19 +59,19 @@ class SortedVector {
 
   // Insert value into sorted position in the vector.
   // Finds insertion point of value and makes gap by right shift.
-  void Insert(const T value) { 
+  void Insert(const T value) {
     data_.push_back(std::move(value));
     // Find last instance of value or first value greater than value.
     size_t pos = BinarySearchLast(value, true);
     // Right shift from position.
     for (size_t i = pos; i < data_.size(); i++) {
-      data_[i+1] = std::move(data_[i]);
+      data_[i + 1] = std::move(data_[i]);
     }
     data_[pos] = std::move(value);
   };
 
-  // Insert multiple values into vector. Puts off sorting until all new values inserted.  
-  void Insert(const std::vector<T> values){
+  // Insert multiple values into vector. Puts off sorting until all new values inserted.
+  void Insert(const std::vector<T> values) {
     for (size_t i = 0; i < values.size(); i++) {
       InsertWithoutSorting(values[i]);
     }
@@ -86,9 +86,9 @@ class SortedVector {
     return Delete(*idx);
   };
 
-  void Delete(const size_t idx){
+  void Delete(const size_t idx) {
     for (size_t i = idx + 1; i < data_.size(); i++) {
-      data_[i-1] = std::move(data_[i]);
+      data_[i - 1] = std::move(data_[i]);
     }
     data_.pop_back();
   };
@@ -138,9 +138,7 @@ class SortedVector {
   };
 
   // Get data vector
-  std::vector<T> &GetData() {
-    return data_;
-  };
+  std::vector<T> &GetData() { return data_; };
 
  protected:
   // Checks if vector is currently in a sorted state.
@@ -163,8 +161,7 @@ class SortedVector {
         pos -= i;
       } else if (cmp_val < 0) {
         pos += i;
-      }
-      else {
+      } else {
         return pos;
       }
     }
@@ -173,7 +170,8 @@ class SortedVector {
 
   // Perform binary search to find position of first occuraance of the greatest element
   // that is less than or equal to target element.
-  std::optional<size_t> BinarySearchFirst(const T value, const bool accept_nonequal = true) const {
+  std::optional<size_t> BinarySearchFirst(const T value,
+                                          const bool accept_nonequal = true) const {
     size_t pos = data_.size() / 2;
     for (size_t i = data_.size() / 4; i > 1; i /= 2) {
       int cmp_val = CompareFn(value, data_[pos]);
@@ -191,7 +189,8 @@ class SortedVector {
 
   // Perform binary search to find position of last occurance of the least element that
   // is greater than or equal to target element.
-  std::optional<size_t> BinarySearchLast(const T value, const bool accept_nonequal = true) const {
+  std::optional<size_t> BinarySearchLast(const T value,
+                                         const bool accept_nonequal = true) const {
     size_t pos = data_.size() / 2;
     for (size_t i = data_.size() / 4; i > 1; i /= 2) {
       int cmp_val = CompareFn(value, data_[pos]);
@@ -273,17 +272,16 @@ class SortedVector {
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 
-TEST_CASE("Sorted Vectors") { 
+TEST_CASE("Sorted Vectors") {
   std::cout << "== SORTED_VECTORS" << std::endl;
   // Test with int vector.
-  std::vector<int> int_vec = { -2, -2, 0, 0, 0, 1, 2, 3, 5, 7, 10, 11 };
-  std::vector<int> int_vec_shuf = { -5, 5, 3, 2, 0, 4, 5, -1 };
+  std::vector<int> int_vec = {-2, -2, 0, 0, 0, 1, 2, 3, 5, 7, 10, 11};
+  std::vector<int> int_vec_shuf = {-5, 5, 3, 2, 0, 4, 5, -1};
   // std::cout << "Vector: " << int_vec_shuf << std::endl;
   // SortedVector int_sortvec = SortedVector(int_vec);
   // std::cout << "SortedVector: " << int_sortvec.GetData() << std::endl;
 
   // Test with unique pointers.
-
 }
 
 #endif  // DOCTEST_LIBRARY_INCLUDED

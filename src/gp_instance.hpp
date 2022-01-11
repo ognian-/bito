@@ -99,7 +99,7 @@ class GPInstance {
   void SubsplitDAGToDot(const std::string &out_path, bool show_index_labels = true);
 
   // TODO: Work in Progress
-  // ** NNI Evaluation Engine
+  // ** NNI Evaluation Engine / Grafted DAG
 
   // Initialize NNI Evaluation Engine.
   void MakeNNIEngine();

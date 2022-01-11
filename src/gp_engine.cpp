@@ -14,6 +14,7 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
                    EigenVectorXd inverted_sbn_prior)
     : site_pattern_(std::move(site_pattern)),
       plv_count_(plv_count),
+      gpcsp_count_(gpcsp_count),
       rescaling_threshold_(rescaling_threshold),
       log_rescaling_threshold_(log(rescaling_threshold)),
       mmapped_master_plv_(mmap_file_path, plv_count_ * site_pattern_.PatternCount()),
@@ -24,22 +25,24 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
   Assert(plvs_.back().rows() == MmappedNucleotidePLV::base_count_ &&
              plvs_.back().cols() == site_pattern_.PatternCount(),
          "Didn't get the right shape of PLVs out of Subdivide.");
-  rescaling_counts_.resize(plv_count_);
-  rescaling_counts_.setZero();
-  branch_lengths_.resize(gpcsp_count);
-  branch_lengths_.setConstant(default_branch_length_);
-  log_marginal_likelihood_.resize(site_pattern_.PatternCount());
-  log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
-  log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
-
-  auto weights = site_pattern_.GetWeights();
-  site_pattern_weights_ = EigenVectorXdOfStdVectorDouble(weights);
-
+  // Allocate PLVs for each node in DAG.
   quartet_root_plv_ = plvs_.at(0);
   quartet_root_plv_.setZero();
   quartet_r_s_plv_ = quartet_root_plv_;
   quartet_q_s_plv_ = quartet_root_plv_;
   quartet_r_sorted_plv_ = quartet_root_plv_;
+  // Allocate rescaling counts for each node in DAG.
+  rescaling_counts_.resize(plv_count_);
+  rescaling_counts_.setZero();
+  // Allocate weights for site patterns.
+  auto weights = site_pattern_.GetWeights();
+  site_pattern_weights_ = EigenVectorXdOfStdVectorDouble(weights);
+  // Allocate branch lengths and likelihoods for each edge in DAG.
+  branch_lengths_.resize(gpcsp_count);
+  branch_lengths_.setConstant(default_branch_length_);
+  log_marginal_likelihood_.resize(site_pattern_.PatternCount());
+  log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
+  log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
   hybrid_marginal_log_likelihoods_.resize(gpcsp_count);
   hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
 
@@ -47,27 +50,44 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
 }
 
 // TODO:
-void GPEngine::Initialize(SitePattern site_pattern, size_t plv_count,
-                          size_t gpcsp_count, const std::string& mmap_file_path,
-                          double rescaling_threshold, EigenVectorXd sbn_prior,
+void GPEngine::InitEngine(size_t plv_count, size_t gpcsp_count,
+                          const std::string& mmap_file_path, double rescaling_threshold,
+                          EigenVectorXd sbn_prior,
                           EigenVectorXd unconditional_node_probabilities,
                           EigenVectorXd inverted_sbn_prior) {
   InitializePLVsWithSitePatterns();
 }
 
-void GPEngine::UpdateAfterModifyingDAG(
-    SitePattern site_pattern, const size_t old_plv_count, const size_t new_plv_count,
-    const size_t old_gpcsp_count, const size_t new_gpcsp_count,
-    const std::string& mmap_file_path, const SizeVector& node_reindexer,
-    const SizeVector& edge_reindexer) {
+void GPEngine::InitEngineForDAG(const size_t plv_count, const size_t gpcsp_count,
+                                const std::string& graft_mmap_file_path) {
+  // Initialize size of all plv/node-dependent data.
+  plv_count_ = plv_count;
+
+  // Initialize size of all gpcsp/edge-dependent data.
+}
+
+void GPEngine::ResizeAfterModifyingDAG(const size_t old_plv_count,
+                                       const size_t new_plv_count,
+                                       const size_t old_gpcsp_count,
+                                       const size_t new_gpcsp_count) {
+  //
+}
+
+void GPEngine::UpdateAfterModifyingDAG(const size_t old_plv_count,
+                                       const size_t new_plv_count,
+                                       const size_t old_gpcsp_count,
+                                       const size_t new_gpcsp_count,
+                                       const std::string& mmap_file_path,
+                                       const SizeVector& node_reindexer,
+                                       const SizeVector& edge_reindexer) {
   size_t old_size, new_size;
   EigenVectorXd old_data_vector;
 
   // (1) Resize and Remap mmapped data.
   // Update mmapping size so it can store new nodes.
   old_size = old_plv_count;
-  MmappedNucleotidePLV *old_mmapped_master_plv = &mmapped_master_plv_;
-  NucleotidePLVRefVector *old_plvs = &plvs_;
+  MmappedNucleotidePLV* old_mmapped_master_plv = &mmapped_master_plv_;
+  NucleotidePLVRefVector* old_plvs = &plvs_;
   // MmappedNucleotidePLV *new_mmapped_master_plv =
   //     &MmappedNucleotidePLV(mmap_file_path, new_plv_count *
   //     site_pattern.PatternCount());
@@ -123,16 +143,56 @@ void GPEngine::UpdateAfterModifyingDAG(
   hybrid_marginal_log_likelihoods_.resize(site_pattern_.PatternCount());
 }
 
-void UpdateAfterGraftingDAG(SitePattern site_pattern, size_t plv_count,
-                            size_t gpcsp_count, const std::string& mmap_file_path,
-                            const std::string& graft_mmap_file_path) {}
+void GPEngine::InitEngineForGraftDAG(size_t plv_count, size_t gpcsp_count,
+                                     const std::string& mmap_file_path,
+                                     const std::string& graft_mmap_file_path) {
+  //
+}
 
-void ComputePerNNIPerPCSPLikelihood(const size_t parent_node_id,
-                                    const size_t child_node_id,
-                                    SizeVector& parents_of_parent_nodes,
-                                    SizeVector& children_of_parent_nodes,
-                                    SizeVector& parents_of_child_nodes,
-                                    SizeVector& children_of_child_nodes) {}
+void GPEngine::ResizeAfterGraftingDAG(const size_t old_plv_count,
+                                      const size_t new_plv_count,
+                                      const size_t old_gpcsp_count,
+                                      const size_t new_gpcsp_count) {
+  //
+}
+
+void GPEngine::UpdateAfterGraftingDAG(size_t plv_count, size_t gpcsp_count,
+                                      const std::string& mmap_file_path,
+                                      const std::string& graft_mmap_file_path) {
+  //
+}
+
+EigenVectorXd ComputeAllNNIsPerPCSPLikelihood() {
+  //
+}
+
+std::vector <
+    ComputePerNNIPerPCSPLikelihood(
+        const size_t parent_node_id, const size_t child_node_id,
+        SizeVector& parents_of_parent_nodes, SizeVector& children_of_parent_nodes,
+        SizeVector& parents_of_child_nodes, SizeVector& children_of_child_nodes,
+        SizeVector& parents_of_parent_edges, SizeVector& children_of_parent_edges,
+        SizeVector& parents_of_child_edges, SizeVector& children_of_child_edges) {
+  // Allocate spaces for edge.
+  size_t edge_count = parents_of_parent_edges.size() + children_of_parent_edges.size() +
+                      children_of_parent_edges.size() + children_of_child_edges.size();
+  EigenVectorXd per_pcsp_likelihoods(edge_count);
+
+  // Solve
+  for (const bool is_parent : {true, false}) {
+    size_t focal_node_id = (is_parent ? parent_node_id : child_node_id);
+    for (const bool is_parents_of_focal_node : {true, false}) {
+      SizeVector adjacent_node_ids;
+      SizeVector adjacent_edge_ids;
+      if (is_parents_of_focal_node) {
+        adjacent_node_ids =
+            (is_parent ? parents_of_parent_nodes : parents_of_child_nodes);
+        adjacent_edge_ids =
+            (is_parent ? parents_of_parent_edges : parents_of_child_edges);
+      }
+    }
+  }
+}
 
 void GPEngine::operator()(const GPOperations::ZeroPLV& op) {
   plvs_.at(op.dest_).setZero();

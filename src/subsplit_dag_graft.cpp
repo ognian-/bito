@@ -431,7 +431,6 @@ size_t SubsplitDAGGraft::HostEdgeCount() const {
   return host_dag_->EdgeCountWithLeafSubsplits();
 }
 
-
 //    These two data structures maintain sorted vectors. There one difference is that
 //    SortedVector allows for duplicate data, SortedUniqueVector does not. SortedVectors
 //    are an alternative to std::set. std::set is useful when you have a large dataset

@@ -38,13 +38,6 @@ class GPEngine {
   void operator()(const GPOperations::UpdateSBNProbabilities& op);
   void operator()(const GPOperations::PrepForMarginalization& op);
 
-  // Update stats and data to reflect current DAG state.
-  void Initialize(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
-                  const std::string& mmap_file_path, double rescaling_threshold,
-                  EigenVectorXd sbn_prior,
-                  EigenVectorXd unconditional_node_probabilities,
-                  EigenVectorXd inverted_sbn_prior);
-
   // Apply all operations in vector in order from beginning to end.
   void ProcessOperations(GPOperationVector operations);
   //
@@ -95,20 +88,47 @@ class GPEngine {
   // object.
 
   // TODO: Update after modify/grafting DAG.
+  // Update stats and data to reflect current DAG state.
+  void InitEngine(size_t plv_count, size_t gpcsp_count,
+                  const std::string& mmap_file_path, double rescaling_threshold,
+                  EigenVectorXd sbn_prior,
+                  EigenVectorXd unconditional_node_probabilities,
+                  EigenVectorXd inverted_sbn_prior);
+
+  // Initialize engine's graftDAG data with current size.
+  void InitEngineForDAG(const size_t plv_count, const size_t gpcsp_count,
+                        const std::string& mmap_file_path);
+  //
+  void ResizeAfterModifyingDAG(const size_t new_plv_count,
+                                       const size_t new_gpcsp_count);
   // Resize data members to store SubsplitDAG after modification.
-  void UpdateAfterModifyingDAG(SitePattern site_pattern, const size_t old_plv_count,
-                               const size_t new_plv_count, const size_t old_gpcsp_count,
+  void UpdateAfterModifyingDAG(const size_t old_plv_count, const size_t new_plv_count,
+                               const size_t old_gpcsp_count,
                                const size_t new_gpcsp_count,
                                const std::string& mmap_file_path,
                                const SizeVector& node_reindexer,
                                const SizeVector& edge_reindexer);
+
+  // Initialize engine's graftDAG data with current size.
+  void InitEngineForGraftDAG(const size_t plv_count, const size_t gpcsp_count,
+                             const std::string& graft_mmap_file_path);
+  //
+  void ResizeAfterGraftingDAG(const size_t new_plv_count,
+                               const size_t new_gpcsp_count);
   // Append new data members to store SubsplitDAG growth after modification.
-  void UpdateAfterGraftingDAG(SitePattern site_pattern, size_t plv_count,
-                              size_t gpcsp_count, const std::string& mmap_file_path,
-                              const std::string& graft_mmap_file_path);
-  // 
-  void ComputePerNNIPerPCSPLikelihood(const size_t parent_node_id,
-                                      const size_t child_node_id);
+  void UpdateAfterGraftingDAG(const size_t old_plv_count, const size_t new_plv_count,
+                              const size_t old_gpcsp_count,
+                              const size_t new_gpcsp_count,
+                              const std::string& mmap_file_path,
+                              const SizeVector& node_reindexer,
+                              const SizeVector& edge_reindexer);
+  // Compute PerPCSP Likelihoods for given NNI pair.
+  SizeVector ComputePerNNIPerPCSPLikelihood(
+      const size_t parent_node_id, const size_t child_node_id,
+      SizeVector& parents_of_parent_nodes, SizeVector& children_of_parent_nodes,
+      SizeVector& parents_of_child_nodes, SizeVector& children_of_child_nodes,
+      SizeVector& parents_of_parent_edges, SizeVector& children_of_parent_edges,
+      SizeVector& parents_of_child_edges, SizeVector& children_of_child_edges);
 
   // Calculate a vector of likelihoods, one for each summand of the hybrid marginal.
   EigenVectorXd CalculateQuartetHybridLikelihoodsWithGraft(
@@ -207,7 +227,8 @@ class GPEngine {
   // Rescaling threshold in log space.
   const double log_rescaling_threshold_;
 
-  // Total number of PLV across entire DAG: plv_per_node * node_count_without_root
+  // Total number of PLVs across entire DAG. Proportional to the number of nodes in DAG.
+  // plv_per_node * node_count_without_root.
   size_t plv_count_;
   // Master PLV: Large data block of virtual memory for Partial Likelihood Vectors.
   // Subdivided into sections for plvs_.
@@ -221,10 +242,13 @@ class GPEngine {
   // [4*num_nodes, 5*num_nodes): r(s).
   // [5*num_nodes, 6*num_nodes): r(s_tilde).
   NucleotidePLVRefVector plvs_;
-  //
+  // Rescaling count for each plv.
   EigenVectorXi rescaling_counts_;
 
   // ** SBN Parameters
+
+  // Total number of
+  size_t gpcsp_count_;
   // branch_lengths_, q_, etc. are indexed in the same way as sbn_parameters_ in
   // gp_instance.
   EigenVectorXd branch_lengths_;
@@ -275,7 +299,7 @@ class GPEngine {
   // The R-PLV pointing leafward from t.
   EigenMatrixXd quartet_r_sorted_plv_;
 
-  // Grafting data.
+  // NNI Engine/Grafting.
   std::optional<MmappedNucleotidePLV> grafted_mmapped_master_plv_ = std::nullopt;
   std::optional<NucleotidePLVRefVector> grafted_plvs_ = std::nullopt;
 };

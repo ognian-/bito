@@ -90,7 +90,7 @@ void GPInstance::MakeEngine(double rescaling_threshold) {
       dag_.UnconditionalNodeProbabilities(sbn_prior);
   auto inverted_sbn_prior =
       dag_.InvertedGPCSPProbabilities(sbn_prior, unconditional_node_probabilities);
-  //
+  // Initialize engine.
   engine_ = std::make_unique<GPEngine>(
       std::move(site_pattern), plv_count_per_node_ * (dag_.NodeCountWithoutDAGRoot()),
       dag_.EdgeCountWithLeafSubsplits(), mmap_file_path_, rescaling_threshold,
@@ -367,6 +367,8 @@ void GPInstance::SubsplitDAGToDot(const std::string &out_path, bool show_index_l
   out_stream.close();
 }
 
+// ** NNI Evaluation Engine / Grafted DAG
+
 SubsplitDAG::ModificationResult GPInstance::AddNodePair(const Bitset &parent_bitset,
                                                         const Bitset &child_bitset) {
   // Add node pair to SubsplitDAG.
@@ -390,10 +392,19 @@ void GPInstance::UpdateEngineAfterModifyingDAG(const SizeVector &node_reindexer,
                                                const SizeVector &edge_reindexer) {}
 
 void GPInstance::UpdateEngineAfterGraftingDAG(const SizeVector &node_reindexer,
-                                              const SizeVector &edge_reindexer) {}
+                                              const SizeVector &edge_reindexer) {
+  Assert(graft_dag_.has_value(), "Cannot UpdateAfterGrafting without Grafted DAG.");
+
+  GetEngine()->UpdateAfterGraftingDAG()
+}
 
 void GPInstance::ComputePerNNIPerPCSPLikelihood(const Bitset &parent_bitset,
-                                                const Bitset &child_bitset) {}
+                                                const Bitset &child_bitset) {
+  Assert(nni_engine_.has_value(),
+         "Cannot compute PerNNILikelihood without NNI Engine.");
+  Assert(graft_dag_.has_value(),
+         "Cannot compute PerNNILikelihood without Grafted DAG.");
+}
 
 void GPInstance::MakeNNIEngine() {}
 

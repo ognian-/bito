@@ -313,21 +313,21 @@ class GPEngine {
   EigenVectorXd site_pattern_weights_;
 
   // ** NNI Engine for GraftedDAG.
-  // NNI per-node data.
-  size_t graft_plv_count_;
-  MmappedNucleotidePLV graft_mmapped_master_plv_;
-  NucleotidePLVRefVector graft_plvs_;
-  EigenMatrixXd graft_quartet_root_plv_;
-  EigenMatrixXd graft_quartet_r_s_plv_;
-  EigenMatrixXd graft_quartet_q_s_plv_;
-  EigenMatrixXd graft_quartet_r_sorted_plv_;
-  EigenVectorXi graft_rescaling;
-  // NNI per-edge data.
-  size_t graft_gpcsp_count;
-  EigenVectorXd graft_branch_lengths_;
-  EigenVectorXd graft_log_likelihoods_;
-  EigenVectorXd graft_log_marginal_likelihoods_;
-  EigenVectorXd graft_hybrid_marginal_log_likelihoods_;
+  // // NNI per-node data.
+  // size_t graft_plv_count_;
+  // MmappedNucleotidePLV graft_mmapped_master_plv_;
+  // NucleotidePLVRefVector graft_plvs_;
+  // EigenMatrixXd graft_quartet_root_plv_;
+  // EigenMatrixXd graft_quartet_r_s_plv_;
+  // EigenMatrixXd graft_quartet_q_s_plv_;
+  // EigenMatrixXd graft_quartet_r_sorted_plv_;
+  // EigenVectorXi graft_rescaling;
+  // // NNI per-edge data.
+  // size_t graft_gpcsp_count;
+  // EigenVectorXd graft_branch_lengths_;
+  // EigenVectorXd graft_log_likelihoods_;
+  // EigenVectorXd graft_log_marginal_likelihoods_;
+  // EigenVectorXd graft_hybrid_marginal_log_likelihoods_;
 };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

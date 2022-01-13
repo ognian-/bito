@@ -23,26 +23,25 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
       unconditional_node_probabilities_(std::move(unconditional_node_probabilities)),
       inverted_sbn_prior_(std::move(inverted_sbn_prior)) {
   Assert(plvs_.back().rows() == MmappedNucleotidePLV::base_count_ &&
-             plvs_.back().cols() == site_pattern_.PatternCount(),
+             plvs_.back().cols() ==
+                 static_cast<Eigen::Index>(site_pattern_.PatternCount()),
          "Didn't get the right shape of PLVs out of Subdivide.");
-  // Allocate PLVs for each node in DAG.
-  quartet_root_plv_ = plvs_.at(0);
-  quartet_root_plv_.setZero();
-  quartet_r_s_plv_ = quartet_root_plv_;
-  quartet_q_s_plv_ = quartet_root_plv_;
-  quartet_r_sorted_plv_ = quartet_root_plv_;
-  // Allocate rescaling counts for each node in DAG.
   rescaling_counts_.resize(plv_count_);
   rescaling_counts_.setZero();
-  // Allocate weights for site patterns.
-  auto weights = site_pattern_.GetWeights();
-  site_pattern_weights_ = EigenVectorXdOfStdVectorDouble(weights);
-  // Allocate branch lengths and likelihoods for each edge in DAG.
   branch_lengths_.resize(gpcsp_count);
   branch_lengths_.setConstant(default_branch_length_);
   log_marginal_likelihood_.resize(site_pattern_.PatternCount());
   log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
   log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
+
+  auto weights = site_pattern_.GetWeights();
+  site_pattern_weights_ = EigenVectorXdOfStdVectorDouble(weights);
+
+  quartet_root_plv_ = plvs_.at(0);
+  quartet_root_plv_.setZero();
+  quartet_r_s_plv_ = quartet_root_plv_;
+  quartet_q_s_plv_ = quartet_root_plv_;
+  quartet_r_sorted_plv_ = quartet_root_plv_;
   hybrid_marginal_log_likelihoods_.resize(gpcsp_count);
   hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
 

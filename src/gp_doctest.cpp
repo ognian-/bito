@@ -1200,7 +1200,7 @@ TEST_CASE("SubsplitDAGGraft: PerPCSP Likelihood Test.") {
   GPDAG& dag = inst.GetDAG();
 
   // Find all viable NNIs for DAG.
-  inst.MakeNNIEngine()
+  // inst.MakeNNIEngine();
   auto nni_engine = NNIEvaluationEngine(pre_dag);
   nni_engine.SyncSetOfNNIsWithDAG();
   size_t nni_count = nni_engine.GetAdjacentNNICount();

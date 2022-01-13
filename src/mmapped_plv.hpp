@@ -42,6 +42,11 @@ class MmappedNucleotidePLV {
 
   size_t ByteCount() const { return mmapped_matrix_.ByteCount(); }
 
+  // MmappedNucleotidePLV(const MmappedNucleotidePLV &) = delete;
+  // MmappedNucleotidePLV(const MmappedNucleotidePLV &&) = delete;
+  // MmappedNucleotidePLV &operator=(const MmappedNucleotidePLV &) = delete;
+  // MmappedNucleotidePLV &operator=(const MmappedNucleotidePLV &&) = delete;
+
  private:
   MmappedMatrix<NucleotidePLV> mmapped_matrix_;
 };

@@ -16,6 +16,7 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
       plv_count_(plv_count),
       gpcsp_count_(gpcsp_count),
       mmapped_master_plv_(mmap_file_path, plv_count_ * site_pattern_.PatternCount()),
+      plvs_(mmapped_master_plv_.Subdivide(plv_count_)),
       rescaling_threshold_(rescaling_threshold),
       log_rescaling_threshold_(log(rescaling_threshold)),
       q_(std::move(sbn_prior)),
@@ -27,7 +28,7 @@ GPEngine::GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_coun
          "Didn't get the right shape of PLVs out of Subdivide.");
   //
   // mmapped_master_plv_ptr_ = std::make_unique<MmappedNucleotidePLV>(mmap_file_path, plv_count_ * site_pattern_.PatternCount());
-  plvs_ = mmapped_master_plv_.Subdivide(plv_count_);
+  // plvs_ = mmapped_master_plv_.Subdivide(plv_count_);
 
   rescaling_counts_.resize(plv_count_);
   rescaling_counts_.setZero();
@@ -68,23 +69,23 @@ void GPEngine::InitEngineForDAG(const size_t plv_count, const size_t gpcsp_count
   plv_count_ = plv_count;
   // mmapped_master_plv_ = std::make_unique<MmappedNucleotidePLV>(mmap_file_path, plv_count_ * site_pattern_.PatternCount());
   // plvs_ = NucleotidePLVRefVector(mmapped_master_plv_.Subdivide(plv_count_));
-  quartet_root_plv_ = plvs_.at(0);
-  quartet_root_plv_.setZero();
-  quartet_r_s_plv_ = quartet_root_plv_;
-  quartet_q_s_plv_ = quartet_root_plv_;
-  quartet_r_sorted_plv_ = quartet_root_plv_;
-  rescaling_counts_.resize(plv_count_);
-  rescaling_counts_.setZero();
+  // quartet_root_plv_ = plvs_.at(0);
+  // quartet_root_plv_.setZero();
+  // quartet_r_s_plv_ = quartet_root_plv_;
+  // quartet_q_s_plv_ = quartet_root_plv_;
+  // quartet_r_sorted_plv_ = quartet_root_plv_;
+  // rescaling_counts_.resize(plv_count_);
+  // rescaling_counts_.setZero();
   
-  // Initialize size of all gpcsp/edge_count dependent data.
-  gpcsp_count_ = gpcsp_count;
-  branch_lengths_.resize(gpcsp_count);
-  branch_lengths_.setConstant(default_branch_length_);
-  log_marginal_likelihood_.resize(site_pattern_.PatternCount());
-  log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
-  log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
-  hybrid_marginal_log_likelihoods_.resize(gpcsp_count);
-  hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
+  // // Initialize size of all gpcsp/edge_count dependent data.
+  // gpcsp_count_ = gpcsp_count;
+  // branch_lengths_.resize(gpcsp_count);
+  // branch_lengths_.setConstant(default_branch_length_);
+  // log_marginal_likelihood_.resize(site_pattern_.PatternCount());
+  // log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
+  // log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
+  // hybrid_marginal_log_likelihoods_.resize(gpcsp_count);
+  // hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
 }
 
 void GPEngine::ResizeAfterModifyingDAG(const size_t old_plv_count,

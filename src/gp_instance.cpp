@@ -394,8 +394,7 @@ void GPInstance::UpdateEngineAfterModifyingDAG(const SizeVector &node_reindexer,
 void GPInstance::UpdateEngineAfterGraftingDAG(const SizeVector &node_reindexer,
                                               const SizeVector &edge_reindexer) {
   Assert(graft_dag_.has_value(), "Cannot UpdateAfterGrafting without Grafted DAG.");
-
-  GetEngine()->UpdateAfterGraftingDAG()
+  // GetEngine()->UpdateAfterGraftingDAG();
 }
 
 void GPInstance::ComputePerNNIPerPCSPLikelihood(const Bitset &parent_bitset,
@@ -406,6 +405,13 @@ void GPInstance::ComputePerNNIPerPCSPLikelihood(const Bitset &parent_bitset,
          "Cannot compute PerNNILikelihood without Grafted DAG.");
 }
 
-void GPInstance::MakeNNIEngine() {}
+void GPInstance::MakeNNIEngine() {
+  nni_engine_ = NNIEvaluationEngine(dag_);
+}
+
+NNIEvaluationEngine &GPInstance::GetNNIEngine() {
+  Assert(nni_engine_.has_value(), "GPInstance::GetNNIEngine(): NNI Evaluation Engine has not been initialized.");
+  return *nni_engine_;
+}
 
 size_t GPInstance::GetNNICount() { return nni_engine_->GetAdjacentNNICount(); }

@@ -23,7 +23,8 @@ class GPEngine {
  public:
   GPEngine(SitePattern site_pattern, size_t plv_count, size_t gpcsp_count,
            const std::string& mmap_file_path, double rescaling_threshold,
-           EigenVectorXd sbn_prior, EigenVectorXd unconditional_node_probabilities,
+           EigenVectorXd sbn_prior, 
+           EigenVectorXd unconditional_node_probabilities,
            EigenVectorXd inverted_sbn_prior);
 
   // These operators mean that we can invoke this class on each of the operations.
@@ -99,10 +100,13 @@ class GPEngine {
   void InitEngineForDAG(const size_t plv_count, const size_t gpcsp_count,
                         const std::string& mmap_file_path);
   //
-  void ResizeAfterModifyingDAG(const size_t new_plv_count,
-                                       const size_t new_gpcsp_count);
+  void ResizeAfterModifyingDAG(const size_t old_plv_count, 
+                               const size_t new_plv_count,
+                               const size_t old_gpcsp_count,
+                               const size_t new_gpcsp_count);
   // Resize data members to store SubsplitDAG after modification.
-  void UpdateAfterModifyingDAG(const size_t old_plv_count, const size_t new_plv_count,
+  void UpdateAfterModifyingDAG(const size_t old_plv_count, 
+                               const size_t new_plv_count,
                                const size_t old_gpcsp_count,
                                const size_t new_gpcsp_count,
                                const std::string& mmap_file_path,
@@ -113,8 +117,10 @@ class GPEngine {
   void InitEngineForGraftDAG(const size_t plv_count, const size_t gpcsp_count,
                              const std::string& graft_mmap_file_path);
   //
-  void ResizeAfterGraftingDAG(const size_t new_plv_count,
-                               const size_t new_gpcsp_count);
+  void ResizeAfterGraftingDAG(const size_t old_plv_count,
+                              const size_t new_plv_count,
+                              const size_t old_gpcsp_count,
+                              const size_t new_gpcsp_count);
   // Append new data members to store SubsplitDAG growth after modification.
   void UpdateAfterGraftingDAG(const size_t old_plv_count, const size_t new_plv_count,
                               const size_t old_gpcsp_count,
@@ -122,8 +128,11 @@ class GPEngine {
                               const std::string& mmap_file_path,
                               const SizeVector& node_reindexer,
                               const SizeVector& edge_reindexer);
+
+  //
+  EigenVectorXd ComputeAllNNIsPerPCSPLikelihood();
   // Compute PerPCSP Likelihoods for given NNI pair.
-  SizeVector ComputePerNNIPerPCSPLikelihood(
+  EigenVectorXd ComputePerNNIPerPCSPLikelihood(
       const size_t parent_node_id, const size_t child_node_id,
       SizeVector& parents_of_parent_nodes, SizeVector& children_of_parent_nodes,
       SizeVector& parents_of_child_nodes, SizeVector& children_of_child_nodes,
@@ -213,19 +222,7 @@ class GPEngine {
   // Number of iterations allowed for branch length optimization.
   size_t max_iter_for_optimization_ = 1000;
 
-  // The length of this vector is equal to the number of site patterns.
-  // Entry j stores the marginal log likelihood over all trees at site pattern
-  // j.
-  EigenVectorXd log_marginal_likelihood_;
-  // This vector is indexed by the GPCSPs and stores the hybrid marginals if they are
-  // available.
-  EigenVectorXd hybrid_marginal_log_likelihoods_;
-  // Descriptor containing all taxons and sequence alignments.
-  SitePattern site_pattern_;
-  // Rescaling threshold factor to prevent under/overflow errors.
-  const double rescaling_threshold_;
-  // Rescaling threshold in log space.
-  const double log_rescaling_threshold_;
+  // ** Per-Node Data
 
   // Total number of PLVs across entire DAG. Proportional to the number of nodes in DAG.
   // plv_per_node * node_count_without_root.
@@ -245,9 +242,19 @@ class GPEngine {
   // Rescaling count for each plv.
   EigenVectorXi rescaling_counts_;
 
-  // ** SBN Parameters
+  // For hybrid marginal calculations. #328
+  // The PLV coming down from the root.
+  EigenMatrixXd quartet_root_plv_;
+  // The R-PLV pointing leafward from s.
+  EigenMatrixXd quartet_r_s_plv_;
+  // The Q-PLV pointing leafward from s.
+  EigenMatrixXd quartet_q_s_plv_;
+  // The R-PLV pointing leafward from t.
+  EigenMatrixXd quartet_r_sorted_plv_;
 
-  // Total number of
+  // ** Per-Edge Data
+
+  // Total number of edges in DAG.
   size_t gpcsp_count_;
   // branch_lengths_, q_, etc. are indexed in the same way as sbn_parameters_ in
   // gp_instance.
@@ -269,11 +276,27 @@ class GPEngine {
   // a GPCSP corresponding to index i at site j.
   EigenMatrixXd log_likelihoods_;
 
+  // The length of this vector is equal to the number of site patterns.
+  // Entry j stores the marginal log likelihood over all trees at site pattern
+  // j.
+  EigenVectorXd log_marginal_likelihood_;
+  // This vector is indexed by the GPCSPs and stores the hybrid marginals if they are
+  // available.
+  EigenVectorXd hybrid_marginal_log_likelihoods_;
+  // Descriptor containing all taxons and sequence alignments.
+  SitePattern site_pattern_;
+  // Rescaling threshold factor to prevent under/overflow errors.
+  const double rescaling_threshold_;
+  // Rescaling threshold in log space.
+  const double log_rescaling_threshold_;
+
   // Internal "temporaries" useful for likelihood and derivative calculation.
   EigenVectorXd per_pattern_log_likelihoods_;
   EigenVectorXd per_pattern_likelihoods_;
   EigenVectorXd per_pattern_likelihood_derivatives_;
   EigenVectorXd per_pattern_likelihood_derivative_ratios_;
+
+  // ** Substitution Model
 
   // When we change from JC69Model, check that we are actually doing transpose in
   // leafward calculations.
@@ -289,19 +312,22 @@ class GPEngine {
   Eigen::Vector4d stationary_distribution_ = substitution_model_.GetFrequencies();
   EigenVectorXd site_pattern_weights_;
 
-  // For hybrid marginal calculations. #328
-  // The PLV coming down from the root.
-  EigenMatrixXd quartet_root_plv_;
-  // The R-PLV pointing leafward from s.
-  EigenMatrixXd quartet_r_s_plv_;
-  // The Q-PLV pointing leafward from s.
-  EigenMatrixXd quartet_q_s_plv_;
-  // The R-PLV pointing leafward from t.
-  EigenMatrixXd quartet_r_sorted_plv_;
-
-  // NNI Engine/Grafting.
-  std::optional<MmappedNucleotidePLV> grafted_mmapped_master_plv_ = std::nullopt;
-  std::optional<NucleotidePLVRefVector> grafted_plvs_ = std::nullopt;
+  // ** NNI Engine for GraftedDAG.
+  // NNI per-node data.
+  size_t graft_plv_count_;
+  MmappedNucleotidePLV graft_mmapped_master_plv_;
+  NucleotidePLVRefVector graft_plvs_;
+  EigenMatrixXd graft_quartet_root_plv_;
+  EigenMatrixXd graft_quartet_r_s_plv_;
+  EigenMatrixXd graft_quartet_q_s_plv_;
+  EigenMatrixXd graft_quartet_r_sorted_plv_;
+  EigenVectorXi graft_rescaling;
+  // NNI per-edge data.
+  size_t graft_gpcsp_count;
+  EigenVectorXd graft_branch_lengths_;
+  EigenVectorXd graft_log_likelihoods_;
+  EigenVectorXd graft_log_marginal_likelihoods_;
+  EigenVectorXd graft_hybrid_marginal_log_likelihoods_;
 };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

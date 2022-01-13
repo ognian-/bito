@@ -56,9 +56,13 @@ void NNIEvaluationEngine::Runner() {
 
 // ** Evaluate Methods
 
-void Evaluate() {}
+void Evaluate() {
+  //
+}
 
-void NaiveEvaluate() {}
+void NaiveEvaluate() {
+  //
+}
 
 // ** Individual NNI Evaluation Methods
 

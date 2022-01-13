@@ -58,13 +58,30 @@ void GPEngine::InitEngine(size_t plv_count, size_t gpcsp_count,
   InitializePLVsWithSitePatterns();
 }
 
-void GPEngine::InitEngineForDAG(const size_t plv_count, const size_t gpcsp_count,
-                                const std::string& graft_mmap_file_path) {
-  // Initialize size of all plv/node-dependent data.
-  plv_count_ = plv_count;
-
-  // Initialize size of all gpcsp/edge-dependent data.
-}
+// void GPEngine::InitEngineForDAG(const size_t plv_count, const size_t gpcsp_count,
+//                                 const std::string& mmap_file_path) {
+//   // Initialize size of all plv/node_count dependent data.
+//   plv_count_ = plv_count;
+//   mmapped_master_plv_(mmap_file_path, Eigen::Index(plv_count_ * site_pattern_.PatternCount()));
+//   plvs_ = NucleotidePLVRefVector(mmapped_master_plv_.Subdivide(plv_count_));
+//   quartet_root_plv_ = plvs_.at(0);
+//   quartet_root_plv_.setZero();
+//   quartet_r_s_plv_ = quartet_root_plv_;
+//   quartet_q_s_plv_ = quartet_root_plv_;
+//   quartet_r_sorted_plv_ = quartet_root_plv_;
+//   rescaling_counts_.resize(plv_count_);
+//   rescaling_counts_.setZero();
+  
+//   // Initialize size of all gpcsp/edge_count dependent data.
+//   gpcsp_count_ = gpcsp_count;
+//   branch_lengths_.resize(gpcsp_count);
+//   branch_lengths_.setConstant(default_branch_length_);
+//   log_marginal_likelihood_.resize(site_pattern_.PatternCount());
+//   log_marginal_likelihood_.setConstant(DOUBLE_NEG_INF);
+//   log_likelihoods_.resize(gpcsp_count, site_pattern_.PatternCount());
+//   hybrid_marginal_log_likelihoods_.resize(gpcsp_count);
+//   hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
+// }
 
 void GPEngine::ResizeAfterModifyingDAG(const size_t old_plv_count,
                                        const size_t new_plv_count,
@@ -143,11 +160,28 @@ void GPEngine::UpdateAfterModifyingDAG(const size_t old_plv_count,
   hybrid_marginal_log_likelihoods_.resize(site_pattern_.PatternCount());
 }
 
-void GPEngine::InitEngineForGraftDAG(size_t plv_count, size_t gpcsp_count,
-                                     const std::string& mmap_file_path,
-                                     const std::string& graft_mmap_file_path) {
-  //
-}
+// void GPEngine::InitEngineForGraftDAG(size_t graft_plv_count, size_t graft_gpcsp_count,
+//                                      const std::string& graft_mmap_file_path) {
+//   // Initialize size of all plv/node_count dependent data.
+//   graft_plv_count_ = graft_plv_count;
+//   graft_mmapped_master_plv_(graft_mmap_file_path, graft_plv_count_ * site_pattern_.PatternCount());
+//   graft_plvs_ = NucleotidePLVRefVector(graft_mmapped_master_plv_.Subdivide(plv_count_));
+//   graft_quartet_root_plv_ = plvs_.at(0);
+//   graft_quartet_root_plv_.setZero();
+//   graft_quartet_r_s_plv_ = graft_quartet_root_plv_;
+//   graft_quartet_q_s_plv_ = graft_quartet_root_plv_;
+//   graft_quartet_r_sorted_plv_ = graft_quartet_root_plv_;
+  
+//   // Initialize size of all gpcsp/edge_count dependent data.
+//   gpcsp_count_ = graft_gpcsp_count;
+//   graft_branch_lengths_.resize(graft_gpcsp_count);
+//   graft_branch_lengths_.setConstant(default_branch_length_);
+//   graft_log_marginal_likelihoods_.resize(site_pattern_.PatternCount());
+//   graft_log_marginal_likelihoods_.setConstant(DOUBLE_NEG_INF);
+//   graft_log_likelihoods_.resize(graft_gpcsp_count, site_pattern_.PatternCount());
+//   graft_hybrid_marginal_log_likelihoods_.resize(graft_gpcsp_count);
+//   graft_hybrid_marginal_log_likelihoods_.setConstant(DOUBLE_NEG_INF);
+// }
 
 void GPEngine::ResizeAfterGraftingDAG(const size_t old_plv_count,
                                       const size_t new_plv_count,
@@ -156,18 +190,21 @@ void GPEngine::ResizeAfterGraftingDAG(const size_t old_plv_count,
   //
 }
 
-void GPEngine::UpdateAfterGraftingDAG(size_t plv_count, size_t gpcsp_count,
+void GPEngine::UpdateAfterGraftingDAG(const size_t old_plv_count, const size_t new_plv_count,
+                                      const size_t old_gpcsp_count,
+                                      const size_t new_gpcsp_count,
                                       const std::string& mmap_file_path,
-                                      const std::string& graft_mmap_file_path) {
+                                      const SizeVector& node_reindexer,
+                                      const SizeVector& edge_reindexer) {
   //
 }
 
-EigenVectorXd ComputeAllNNIsPerPCSPLikelihood() {
+EigenVectorXd GPEngine::ComputeAllNNIsPerPCSPLikelihood() {
   //
 }
 
-std::vector <
-    ComputePerNNIPerPCSPLikelihood(
+EigenVectorXd
+    GPEngine::ComputePerNNIPerPCSPLikelihood(
         const size_t parent_node_id, const size_t child_node_id,
         SizeVector& parents_of_parent_nodes, SizeVector& children_of_parent_nodes,
         SizeVector& parents_of_child_nodes, SizeVector& children_of_child_nodes,
@@ -178,7 +215,7 @@ std::vector <
                       children_of_parent_edges.size() + children_of_child_edges.size();
   EigenVectorXd per_pcsp_likelihoods(edge_count);
 
-  // Solve
+  // Compute NNI 
   for (const bool is_parent : {true, false}) {
     size_t focal_node_id = (is_parent ? parent_node_id : child_node_id);
     for (const bool is_parents_of_focal_node : {true, false}) {

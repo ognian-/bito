@@ -304,8 +304,10 @@ class GenericSBNInstance {
                   const PhyloModelSpecification &model_specification) {
     CheckSequencesAndTreesLoaded();
     SitePattern site_pattern(alignment_, TagTaxonMap());
+    std::cout << "Make engine [BEGIN]" << std::endl;
     engine_ = std::make_unique<Engine>(engine_specification, model_specification,
                                        site_pattern);
+    std::cout << "Make engine [END]" << std::endl;
   }
 
   // Return a raw pointer to the engine if it's available.

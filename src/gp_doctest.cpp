@@ -41,6 +41,7 @@ GPInstance GPInstanceOfFiles(const std::string& fasta_path,
   GPInstance inst("_ignore/mmapped_plv.data");
   inst.ReadFastaFile(fasta_path);
   inst.ReadNewickFile(newick_path);
+  
   inst.MakeEngine();
   return inst;
 }
@@ -50,7 +51,9 @@ GPInstance GPInstanceOfFiles(const std::string& fasta_path,
 // You can see a helpful diagram at
 // https://github.com/phylovi/bito/issues/349#issuecomment-898672399
 GPInstance MakeHelloGPInstance(const std::string& fasta_path) {
+  std::cout << "BEGIN instance" << std::endl;
   auto inst = GPInstanceOfFiles(fasta_path, "data/hello_rooted.nwk");
+  std::cout << "BEGIN instance" << std::endl;
   EigenVectorXd branch_lengths(5);
   // Order set by HelloGPCSP.
   branch_lengths << 0, 0.22, 0.113, 0.15, 0.1;
@@ -101,11 +104,17 @@ EigenVectorXd MakeHelloGPInstanceMarginalLikelihoodTestBranchLengths() {
 }
 
 TEST_CASE("GPInstance: straightforward classical likelihood calculation") {
+  std::cout << "TEST := Make hello instance" << std::endl;
   auto inst = MakeHelloGPInstance();
+  std::cout << "TEST := Get Engine" << std::endl;
   auto engine = inst.GetEngine();
+  std::cout << "TEST := Engine built" << std::endl;
 
   inst.PopulatePLVs();
+  std::cout << "TEST := Populate PLVs" << std::endl;
+
   inst.ComputeLikelihoods();
+  std::cout << "TEST := Compute Likelihoods" << std::endl;
 
   EigenVectorXd realized_log_likelihoods =
       inst.GetEngine()->GetPerGPCSPLogLikelihoods();
